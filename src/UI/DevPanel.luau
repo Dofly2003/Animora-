@@ -33,7 +33,8 @@ function DevPanel.create(
 	scope: Fusion.Scope<typeof(Fusion)>,
 	helpers: Helpers,
 	layoutOrder: number,
-	widget: Instance?
+	widget: Instance?,
+	actions: { openTimelineTest: () -> () }
 ): Frame
 	local status = scope:Value({ key = "spike.status.idle" } :: Status)
 	local preview: Preview.Preview? = nil
@@ -185,6 +186,7 @@ function DevPanel.create(
 					end),
 					button("spike.stop", 90, stop),
 					button("spike.export", 150, exportWave),
+					button("spike.timeline", 150, actions.openTimelineTest),
 				},
 			}),
 			scope:New("TextLabel")({

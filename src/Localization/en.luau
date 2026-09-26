@@ -15,7 +15,7 @@ return {
 	["timeline.loop"] = "Loop",
 	["timeline.frame"] = "Frame {frame}",
 
-	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export",
+	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",
 	["spike.export"] = "Export wave",
@@ -27,6 +27,13 @@ return {
 	["spike.status.playing"] = "Playing on {rig}: {fps} updates/sec. Press Stop before saving the place.",
 	["spike.status.stopped"] = "Stopped. Rig pose restored.",
 	["spike.status.noUpdates"] = "No frame updates in edit mode (Heartbeat is not firing). Please report this result.",
+
+	["spike.timeline"] = "Timeline test",
+	["timelineTest.auto"] = "Run auto test (6 s)",
+	["timelineTest.running"] = "Running...",
+	["timelineTest.hint"] = "Ruler: drag = scrub, wheel = zoom, Shift+wheel = pan",
+	["timelineTest.live"] = "Live: {fps} fps, worst frame {worst} ms, last scrub {scrub} ms, {markers} markers drawn",
+	["timelineTest.result"] = "Auto test: {fps} fps avg, worst frame {worst} ms, scrub avg {scrubAvg} ms / max {scrubMax} ms, up to {markers} markers",
 
 	["export.success"] = 'Exported "{name}" to {location}',
 	["export.error"] = "Export failed: {reason}",

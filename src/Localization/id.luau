@@ -15,7 +15,7 @@ return {
 	["timeline.loop"] = "Ulang",
 	["timeline.frame"] = "Frame {frame}",
 
-	["spike.title"] = "Tes developer - Spike C: preview di mode edit, Spike A: ekspor",
+	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",
 	["spike.export"] = "Ekspor lambaian",
@@ -27,6 +27,13 @@ return {
 	["spike.status.playing"] = "Memutar di {rig}: {fps} update/detik. Tekan Stop sebelum menyimpan place.",
 	["spike.status.stopped"] = "Berhenti. Pose rig sudah dikembalikan.",
 	["spike.status.noUpdates"] = "Tidak ada update frame di mode edit (Heartbeat tidak berjalan). Tolong laporkan hasil ini.",
+
+	["spike.timeline"] = "Tes timeline",
+	["timelineTest.auto"] = "Jalankan tes otomatis (6 dtk)",
+	["timelineTest.running"] = "Berjalan...",
+	["timelineTest.hint"] = "Penggaris: seret = scrub, roda = zoom, Shift+roda = geser",
+	["timelineTest.live"] = "Langsung: {fps} fps, frame terburuk {worst} ms, scrub terakhir {scrub} ms, {markers} marker digambar",
+	["timelineTest.result"] = "Tes otomatis: rata-rata {fps} fps, frame terburuk {worst} ms, scrub rata-rata {scrubAvg} ms / maks {scrubMax} ms, hingga {markers} marker",
 
 	["export.success"] = '"{name}" berhasil diekspor ke {location}',
 	["export.error"] = "Ekspor gagal: {reason}",

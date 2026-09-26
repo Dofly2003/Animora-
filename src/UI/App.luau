@@ -16,7 +16,11 @@ local App = {}
 
 export type AppHandle = { destroy: (self: AppHandle) -> () }
 
-function App.mount(parent: Instance, pluginSettings: Settings.Settings): AppHandle
+export type AppActions = {
+	openTimelineTest: () -> (),
+}
+
+function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions: AppActions): AppHandle
 	local scope = Fusion.scoped(Fusion)
 
 	local language = scope:Value(Localization.getLanguage())
@@ -125,7 +129,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings): AppHand
 					languageButton("id"),
 				},
 			}),
-			DevPanel.create(scope, { language = language, text = text, color = color }, 4, parent),
+			DevPanel.create(scope, { language = language, text = text, color = color }, 4, parent, actions),
 		},
 	})
 

@@ -7,7 +7,7 @@ Fill in each spike after trying it. These decide the approach for Phase 1.
 - Goal: create a 2-second KeyframeSequence for an R15 rig from code, publish it, play it in game.
 - Pass if: it publishes, gets an asset ID, and plays exactly like the preview.
 - How to run: select a rig, press **Export wave** in the Animora panel. The KeyframeSequence appears in ServerStorage > AnimoraSaves > Exports (baked to 30 fps, Linear keys). Right-click it > Save to Roblox, copy the ID, then play it in game with a test script.
-- Result: **Publish works** (2026-09-26), asset ID 107592082560445. In-game playback check pending.
+- Result: **Pass** (2026-09-26). Asset ID 107592082560445 (exported from the R6 test rig) plays in game via Animator:LoadAnimation and matches the edit-mode preview.
 - Notes:
     - First export wrote every joint in every keyframe (~1,000 Pose objects); Save to Roblox timed out repeatedly.
     - A clip made in the built-in Animation Editor published fine on the same account and network.
@@ -18,6 +18,7 @@ Fill in each spike after trying it. These decide the approach for Phase 1.
 
 - Goal: timeline widget with 30 tracks x 200 keyframes; scroll, zoom, scrub.
 - Pass if: stays above 30 fps while scrubbing; scrub-to-pose under 16 ms.
+- How to run: Animora panel > **Timeline test** opens a floating window (30 tracks x 200 keys, virtualized). Drag on the ruler to scrub, wheel to zoom, Shift+wheel to pan, then press **Run auto test (6 s)**. The result line is also printed to Output as `[Animora Spike B]`.
 - Result: _not started_
 - Notes:
 
