@@ -15,9 +15,12 @@ return {
 	["timeline.loop"] = "Loop",
 	["timeline.frame"] = "Frame {frame}",
 
-	["spike.title"] = "Dev test - Spike C: edit-mode preview",
+	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",
+	["spike.export"] = "Export wave",
+	["spike.export.done"] = "Exported {name} ({keyframes} keyframes) to ServerStorage > AnimoraSaves > Exports and selected it. Right-click it > Save to Roblox to publish.",
+	["spike.export.error"] = "Export failed: {reason}",
 	["spike.status.idle"] = "Select a rig (or any part of it) in the viewport, then press a Wave button.",
 	["spike.status.noRig"] = "No rig selected. Select a model that has Motor6D joints.",
 	["spike.status.noArm"] = "This rig has no RightUpperArm (R15) or Right Arm (R6) joint.",

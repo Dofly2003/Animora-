@@ -1,7 +1,9 @@
 --!strict
--- Temporary developer panel for the week-1 spikes. Spike C: play a wave on the
--- selected rig in edit mode and report how many frame updates per second arrive.
+-- Temporary developer panel for the week-1 spikes.
+-- Spike C: play a wave on the selected rig in edit mode (C0 preview).
+-- Spike A: export that wave as a KeyframeSequence ready to publish.
 
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local Selection = game:GetService("Selection")
 
 local Fusion = require(script.Parent.Parent.Packages.Fusion)
@@ -10,6 +12,9 @@ local Theme = require(script.Parent.Theme)
 local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
 local Preview = require(script.Parent.Parent.Studio.Preview)
 local WaveTest = require(script.Parent.Parent.Dev.WaveTest)
+local Bake = require(script.Parent.Parent.Core.Bake)
+local IO = require(script.Parent.Parent.Studio.IO)
+local Storage = require(script.Parent.Parent.Studio.Storage)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -45,17 +50,26 @@ function DevPanel.create(
 		end
 	end
 
-	local function startWave(mode: Preview.Mode)
-		stop()
+	-- Resolves the selected rig and builds the wave clip; sets a status and returns nil on failure.
+	local function prepareWave(): (Model?, RigBinder.RigBinder?, any)
 		local rig = WaveTest.findRig(Selection:Get()[1])
 		if not rig then
 			setStatus("spike.status.noRig")
-			return
+			return nil, nil, nil
 		end
 		local binder = RigBinder.new(rig)
 		local clip, reason = WaveTest.buildClip(binder)
 		if not clip then
 			setStatus(reason or "spike.status.noArm")
+			return nil, nil, nil
+		end
+		return rig, binder, clip
+	end
+
+	local function startWave(mode: Preview.Mode)
+		stop()
+		local rig, binder, clip = prepareWave()
+		if not (rig and binder and clip) then
 			return
 		end
 
@@ -78,6 +92,32 @@ function DevPanel.create(
 				setStatus("spike.status.noUpdates")
 			end
 		end)
+	end
+
+	local function exportWave()
+		stop()
+		local rig, binder, clip = prepareWave()
+		if not (rig and binder and clip) then
+			return
+		end
+
+		local ok, result = pcall(function()
+			return IO.exportKeyframeSequence(Bake.bakeClip(clip, 30), binder.joints)
+		end)
+		if not ok then
+			setStatus("spike.export.error", { reason = tostring(result) })
+			return
+		end
+
+		local sequence = result :: KeyframeSequence
+		sequence.Name = "AnimoraWave_" .. rig.Name
+		local recording = ChangeHistoryService:TryBeginRecording("Animora export")
+		sequence.Parent = Storage.getExportsFolder()
+		if recording then
+			ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
+		end
+		Selection:Set({ sequence })
+		setStatus("spike.export.done", { name = sequence.Name, keyframes = #sequence:GetKeyframes() })
 	end
 
 	-- Always put the rig back when the panel is closed, the plugin unloads, or the UI is destroyed.
@@ -113,7 +153,7 @@ function DevPanel.create(
 	return scope:New("Frame")({
 		Name = "DevPanel",
 		LayoutOrder = layoutOrder,
-		Size = UDim2.new(1, 0, 0, 96),
+		Size = UDim2.new(1, 0, 0, 112),
 		BackgroundTransparency = 1,
 		[Children] = {
 			scope:New("UIListLayout")({
@@ -144,11 +184,12 @@ function DevPanel.create(
 						startWave("C0")
 					end),
 					button("spike.stop", 90, stop),
+					button("spike.export", 150, exportWave),
 				},
 			}),
 			scope:New("TextLabel")({
 				LayoutOrder = 3,
-				Size = UDim2.new(1, 0, 0, 36),
+				Size = UDim2.new(1, 0, 0, 52),
 				BackgroundTransparency = 1,
 				FontFace = Theme.FONT,
 				TextSize = Theme.TEXT_SIZE,

@@ -15,9 +15,12 @@ return {
 	["timeline.loop"] = "Ulang",
 	["timeline.frame"] = "Frame {frame}",
 
-	["spike.title"] = "Tes developer - Spike C: preview di mode edit",
+	["spike.title"] = "Tes developer - Spike C: preview di mode edit, Spike A: ekspor",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",
+	["spike.export"] = "Ekspor lambaian",
+	["spike.export.done"] = "{name} ({keyframes} keyframe) diekspor ke ServerStorage > AnimoraSaves > Exports dan sudah dipilih. Klik kanan > Save to Roblox untuk mem-publish.",
+	["spike.export.error"] = "Ekspor gagal: {reason}",
 	["spike.status.idle"] = "Pilih rig (atau salah satu part-nya) di viewport, lalu tekan tombol Lambai.",
 	["spike.status.noRig"] = "Belum ada rig yang dipilih. Pilih model yang punya joint Motor6D.",
 	["spike.status.noArm"] = "Rig ini tidak punya joint RightUpperArm (R15) atau Right Arm (R6).",

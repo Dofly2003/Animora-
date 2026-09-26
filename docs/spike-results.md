@@ -6,6 +6,7 @@ Fill in each spike after trying it. These decide the approach for Phase 1.
 
 - Goal: create a 2-second KeyframeSequence for an R15 rig from code, publish it, play it in game.
 - Pass if: it publishes, gets an asset ID, and plays exactly like the preview.
+- How to run: select a rig, press **Export wave** in the Animora panel. The KeyframeSequence appears in ServerStorage > AnimoraSaves > Exports (baked to 30 fps, Linear keys). Right-click it > Save to Roblox, copy the ID, then play it in game with a test script.
 - Result: _not started_
 - Notes:
 

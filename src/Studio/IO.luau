@@ -43,12 +43,29 @@ local function buildPoseTree(
 	return build(rootPart)
 end
 
--- Exports a clip for `rig` as a KeyframeSequence (not parented anywhere).
--- NOTE: styles Roblox Pose does not support (Sine, Quad, Back, ...) must be baked
--- into extra keyframes before export; that is a Phase 2 task.
-function IO.exportKeyframeSequence(clip: Model.Clip, rig: Model, joints: { [string]: Motor6D }): KeyframeSequence
-	local rootPart = rig.PrimaryPart or rig:FindFirstChild("HumanoidRootPart") :: BasePart?
-	assert(rootPart, "Rig needs a PrimaryPart or HumanoidRootPart")
+-- The root of the joint tree: a part that drives joints but is not driven by any
+-- (HumanoidRootPart on R6/R15, whatever the root is on custom rigs).
+local function findRootPart(joints: { [string]: Motor6D }): BasePart?
+	local driven: { [BasePart]: boolean } = {}
+	for _, joint in joints do
+		if joint.Part1 then
+			driven[joint.Part1] = true
+		end
+	end
+	for _, joint in joints do
+		local part0 = joint.Part0
+		if part0 and not driven[part0] then
+			return part0
+		end
+	end
+	return nil
+end
+
+-- Exports a clip as a KeyframeSequence (not parented anywhere). Pass a baked clip
+-- (Core/Bake) so every easing style survives export; see Bake.luau for why.
+function IO.exportKeyframeSequence(clip: Model.Clip, joints: { [string]: Motor6D }): KeyframeSequence
+	local rootPart = findRootPart(joints)
+	assert(rootPart, "Rig has no Motor6D joint tree")
 
 	local sequence = Instance.new("KeyframeSequence")
 	sequence.Name = clip.name

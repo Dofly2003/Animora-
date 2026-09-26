@@ -19,4 +19,16 @@ function Storage.getFolder(): Folder
 	return folder :: Folder
 end
 
+-- ServerStorage.AnimoraSaves.Exports: exported KeyframeSequences waiting to be published.
+function Storage.getExportsFolder(): Folder
+	local parent = Storage.getFolder()
+	local folder = parent:FindFirstChild("Exports")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Exports"
+		folder.Parent = parent
+	end
+	return folder :: Folder
+end
+
 return Storage
