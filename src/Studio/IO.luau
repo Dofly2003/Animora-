@@ -16,16 +16,32 @@ local POSE_EASING_STYLE: { [Model.EasingStyle]: Enum.PoseEasingStyle } = {
 }
 
 -- Builds the Pose hierarchy for one keyframe by walking the rig's joint tree
--- (Pose objects must be nested parent -> child like the rig's parts).
+-- (Pose objects must be nested parent -> child like the rig's parts). Like the
+-- built-in Animation Editor, only keyed joints and the chain of parents leading
+-- to them are written; untouched branches are left out to keep the asset small.
 local function buildPoseTree(
 	rootPart: BasePart,
 	joints: { [string]: Motor6D },
 	valuesByJoint: { [string]: Model.Keyframe }
 ): Pose
-	local function build(part: BasePart): Pose
+	local function build(part: BasePart): Pose?
+		local children: { Pose } = {}
+		for _, joint in joints do
+			if joint.Part0 == part and joint.Part1 then
+				local child = build(joint.Part1)
+				if child then
+					table.insert(children, child)
+				end
+			end
+		end
+
+		local keyframe = valuesByJoint[part.Name]
+		if not keyframe and #children == 0 then
+			return nil
+		end
+
 		local pose = Instance.new("Pose")
 		pose.Name = part.Name
-		local keyframe = valuesByJoint[part.Name]
 		if keyframe then
 			pose.CFrame = keyframe.value
 			pose.EasingStyle = POSE_EASING_STYLE[keyframe.easingStyle] or Enum.PoseEasingStyle.Linear
@@ -33,14 +49,20 @@ local function buildPoseTree(
 		else
 			pose.Weight = 0
 		end
-		for _, joint in joints do
-			if joint.Part0 == part and joint.Part1 then
-				build(joint.Part1).Parent = pose
-			end
+		for _, child in children do
+			child.Parent = pose
 		end
 		return pose
 	end
-	return build(rootPart)
+
+	local rootPose = build(rootPart)
+	if rootPose then
+		return rootPose
+	end
+	local emptyRoot = Instance.new("Pose")
+	emptyRoot.Name = rootPart.Name
+	emptyRoot.Weight = 0
+	return emptyRoot
 end
 
 -- The root of the joint tree: a part that drives joints but is not driven by any
