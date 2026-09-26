@@ -7,6 +7,7 @@ local Fusion = require(script.Parent.Parent.Packages.Fusion)
 local Localization = require(script.Parent.Parent.Localization)
 local Theme = require(script.Parent.Theme)
 local Settings = require(script.Parent.Parent.Studio.Settings)
+local DevPanel = require(script.Parent.DevPanel)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -124,6 +125,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings): AppHand
 					languageButton("id"),
 				},
 			}),
+			DevPanel.create(scope, { language = language, text = text, color = color }, 4),
 		},
 	})
 

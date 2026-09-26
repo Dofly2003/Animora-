@@ -15,6 +15,17 @@ return {
 	["timeline.loop"] = "Ulang",
 	["timeline.frame"] = "Frame {frame}",
 
+	["spike.title"] = "Tes developer - Spike C: preview di mode edit",
+	["spike.waveTransform"] = "Lambai (Transform)",
+	["spike.waveC0"] = "Lambai (C0)",
+	["spike.stop"] = "Stop",
+	["spike.status.idle"] = "Pilih rig (atau salah satu part-nya) di viewport, lalu tekan tombol Lambai.",
+	["spike.status.noRig"] = "Belum ada rig yang dipilih. Pilih model yang punya joint Motor6D.",
+	["spike.status.noArm"] = "Rig ini tidak punya joint RightUpperArm (R15) atau Right Arm (R6).",
+	["spike.status.playing"] = "Memutar ({mode}) di {rig}: {fps} update/detik",
+	["spike.status.stopped"] = "Berhenti. Pose rig sudah dikembalikan.",
+	["spike.status.noUpdates"] = "Tidak ada update frame di mode edit (Heartbeat tidak berjalan). Tolong laporkan hasil ini.",
+
 	["export.success"] = '"{name}" berhasil diekspor ke {location}',
 	["export.error"] = "Ekspor gagal: {reason}",
 }
