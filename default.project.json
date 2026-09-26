@@ -1,0 +1,9 @@
+{
+	"name": "Animora",
+	"tree": {
+		"$path": "src",
+		"Packages": {
+			"$path": "Packages"
+		}
+	}
+}

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        uses: CompeyDev/setup-rokit@v0.1.2
+
+      - name: Check formatting
+        run: stylua --check src tests scripts
+
+      - name: Lint
+        run: selene src
+
+      - name: Install packages
+        run: wally install
+
+      - name: Build plugin
+        run: |
+          mkdir -p build
+          rojo build -o build/Animora.rbxmx
+
+      - name: Upload plugin build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Animora-plugin
+          path: build/Animora.rbxmx

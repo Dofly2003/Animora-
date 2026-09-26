@@ -1,0 +1,19 @@
+# Wally packages (restored with `wally install`)
+Packages/
+DevPackages/
+ServerPackages/
+
+# Build outputs
+build/
+*.rbxm
+*.rbxmx
+!test-place/*.rbxl
+
+# Rojo / luau-lsp
+sourcemap.json
+*.rbxl.lock
+*.rbxlx.lock
+
+# OS / editor
+.DS_Store
+Thumbs.db

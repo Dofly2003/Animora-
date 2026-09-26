@@ -1,0 +1,14 @@
+[package]
+name = "dofly2003/animora"
+description = "Free, open-source animation editor plugin for Roblox Studio"
+version = "0.1.0"
+license = "MIT"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+Fusion = "elttob/fusion@0.3.0"
+
+[dev-dependencies]
+Jest = "jsdotlua/jest@3.10.0"
+JestGlobals = "jsdotlua/jest-globals@3.10.0"
