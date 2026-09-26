@@ -6,10 +6,7 @@
 local RigBinder = {}
 RigBinder.__index = RigBinder
 
-export type RigBinder = typeof(setmetatable(
-	{} :: { rig: Model, joints: { [string]: Motor6D } },
-	RigBinder
-))
+export type RigBinder = typeof(setmetatable({} :: { rig: Model, joints: { [string]: Motor6D } }, RigBinder))
 
 -- Collects every Motor6D in the rig, keyed by the name of its Part1.
 function RigBinder.new(rig: Model): RigBinder

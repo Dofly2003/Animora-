@@ -15,6 +15,6 @@ return {
 	["timeline.loop"] = "Loop",
 	["timeline.frame"] = "Frame {frame}",
 
-	["export.success"] = "Exported \"{name}\" to {location}",
+	["export.success"] = 'Exported "{name}" to {location}',
 	["export.error"] = "Export failed: {reason}",
 }

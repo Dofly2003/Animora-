@@ -7,10 +7,7 @@ local function studioTheme(): StudioTheme
 	return (settings() :: any).Studio.Theme
 end
 
-function Theme.color(
-	item: Enum.StudioStyleGuideColor,
-	modifier: Enum.StudioStyleGuideModifier?
-): Color3
+function Theme.color(item: Enum.StudioStyleGuideColor, modifier: Enum.StudioStyleGuideModifier?): Color3
 	return studioTheme():GetColor(item, modifier or Enum.StudioStyleGuideModifier.Default)
 end
 

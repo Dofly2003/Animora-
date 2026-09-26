@@ -12,11 +12,7 @@ function Interpolate.ease(alpha: number, style: Model.EasingStyle, direction: Mo
 	if style == "Constant" then
 		return 0
 	end
-	return TweenService:GetValue(
-		alpha,
-		(Enum.EasingStyle :: any)[style],
-		(Enum.EasingDirection :: any)[direction]
-	)
+	return TweenService:GetValue(alpha, (Enum.EasingStyle :: any)[style], (Enum.EasingDirection :: any)[direction])
 end
 
 -- Returns the joint transform of `track` at `time` (identity when the track is empty).

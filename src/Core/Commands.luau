@@ -12,10 +12,7 @@ export type Command = {
 local History = {}
 History.__index = History
 
-export type History = typeof(setmetatable(
-	{} :: { _undo: { Command }, _redo: { Command }, _limit: number },
-	History
-))
+export type History = typeof(setmetatable({} :: { _undo: { Command }, _redo: { Command }, _limit: number }, History))
 
 function History.new(limit: number?): History
 	return setmetatable({ _undo = {}, _redo = {}, _limit = limit or 200 }, History)

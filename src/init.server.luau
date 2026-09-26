@@ -25,7 +25,7 @@ local widgetInfo = DockWidgetPluginGuiInfo.new(
 	600, -- min width
 	200 -- min height
 )
-local widget = plugin:CreateDockWidgetPluginGui("AnimoraMain", widgetInfo)
+local widget = plugin:CreateDockWidgetPluginGuiAsync("AnimoraMain", widgetInfo)
 widget.Title = "Animora"
 widget.Name = "Animora"
 

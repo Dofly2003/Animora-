@@ -52,7 +52,12 @@ function Model.newClip(name: string, fps: number?): Clip
 	}
 end
 
-function Model.newKeyframe(time: number, value: CFrame, easingStyle: EasingStyle?, easingDirection: EasingDirection?): Keyframe
+function Model.newKeyframe(
+	time: number,
+	value: CFrame,
+	easingStyle: EasingStyle?,
+	easingDirection: EasingDirection?
+): Keyframe
 	return {
 		time = time,
 		value = value,

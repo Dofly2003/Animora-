@@ -15,6 +15,6 @@ return {
 	["timeline.loop"] = "Ulang",
 	["timeline.frame"] = "Frame {frame}",
 
-	["export.success"] = "\"{name}\" berhasil diekspor ke {location}",
+	["export.success"] = '"{name}" berhasil diekspor ke {location}',
 	["export.error"] = "Ekspor gagal: {reason}",
 }

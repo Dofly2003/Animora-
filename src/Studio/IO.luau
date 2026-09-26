@@ -17,7 +17,11 @@ local POSE_EASING_STYLE: { [Model.EasingStyle]: Enum.PoseEasingStyle } = {
 
 -- Builds the Pose hierarchy for one keyframe by walking the rig's joint tree
 -- (Pose objects must be nested parent -> child like the rig's parts).
-local function buildPoseTree(rootPart: BasePart, joints: { [string]: Motor6D }, valuesByJoint: { [string]: Model.Keyframe }): Pose
+local function buildPoseTree(
+	rootPart: BasePart,
+	joints: { [string]: Motor6D },
+	valuesByJoint: { [string]: Model.Keyframe }
+): Pose
 	local function build(part: BasePart): Pose
 		local pose = Instance.new("Pose")
 		pose.Name = part.Name
