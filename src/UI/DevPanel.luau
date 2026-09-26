@@ -24,7 +24,12 @@ export type Helpers = {
 
 local DevPanel = {}
 
-function DevPanel.create(scope: Fusion.Scope<typeof(Fusion)>, helpers: Helpers, layoutOrder: number): Frame
+function DevPanel.create(
+	scope: Fusion.Scope<typeof(Fusion)>,
+	helpers: Helpers,
+	layoutOrder: number,
+	widget: Instance?
+): Frame
 	local status = scope:Value({ key = "spike.status.idle" } :: Status)
 	local preview: Preview.Preview? = nil
 
@@ -75,7 +80,17 @@ function DevPanel.create(scope: Fusion.Scope<typeof(Fusion)>, helpers: Helpers, 
 		end)
 	end
 
-	-- Always put the rig back when the plugin unloads or the UI is destroyed.
+	-- Always put the rig back when the panel is closed, the plugin unloads, or the UI is destroyed.
+	if widget and widget:IsA("PluginGui") then
+		table.insert(
+			scope,
+			widget:GetPropertyChangedSignal("Enabled"):Connect(function()
+				if not widget.Enabled then
+					stop()
+				end
+			end)
+		)
+	end
 	table.insert(scope, function()
 		if preview then
 			preview:stop()
@@ -124,10 +139,8 @@ function DevPanel.create(scope: Fusion.Scope<typeof(Fusion)>, helpers: Helpers, 
 						FillDirection = Enum.FillDirection.Horizontal,
 						Padding = UDim.new(0, Theme.PADDING),
 					}),
-					button("spike.waveTransform", 180, function()
-						startWave("Transform")
-					end),
-					button("spike.waveC0", 150, function()
+					-- Spike C result: Motor6D.Transform is not rendered in edit mode, so preview uses C0.
+					button("spike.wave", 150, function()
 						startWave("C0")
 					end),
 					button("spike.stop", 90, stop),

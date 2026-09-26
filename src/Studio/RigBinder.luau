@@ -1,7 +1,7 @@
 --!strict
--- Finds a rig's Motor6D joints and applies poses to them in edit mode by writing
--- Motor6D.Transform directly (no Animator), so preview works without Play Solo.
--- Spike C (week 1) validates this approach; see docs/spike-results.md.
+-- Finds a rig's Motor6D joints. applyPose writes Motor6D.Transform, which only shows
+-- while the game runs; edit-mode preview goes through Studio/Preview in "C0" mode
+-- (see docs/spike-results.md, Spike C).
 
 local RigBinder = {}
 RigBinder.__index = RigBinder

@@ -1,8 +1,8 @@
 --!strict
 -- Plays a clip on a rig in edit mode (no Play Solo) by sampling it every frame.
--- Two write modes are compared in Spike C:
---   "Transform": writes Motor6D.Transform (not saved, not in undo history)
---   "C0":        writes Motor6D.C0 = original C0 * transform, restored on stop
+-- Write modes (Spike C, 2026-09-26):
+--   "C0":        writes Motor6D.C0 = original C0 * transform, restored on stop. Default: works in edit mode.
+--   "Transform": writes Motor6D.Transform. Not rendered in edit mode; only useful while the game runs.
 
 local RunService = game:GetService("RunService")
 

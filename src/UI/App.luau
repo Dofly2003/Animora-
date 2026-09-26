@@ -125,7 +125,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings): AppHand
 					languageButton("id"),
 				},
 			}),
-			DevPanel.create(scope, { language = language, text = text, color = color }, 4),
+			DevPanel.create(scope, { language = language, text = text, color = color }, 4, parent),
 		},
 	})
 
