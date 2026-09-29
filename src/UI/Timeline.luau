@@ -1,6 +1,7 @@
 --!strict
 -- The editor timeline: one row per rig joint (tree order), keyframe markers, a ruler
--- to scrub, and the playhead. Uses the Spike B design: plain Instances, pooled
+-- to scrub, and the playhead. Keyframes can be clicked (Shift/Ctrl adds), box-selected
+-- by dragging empty space, and dragged sideways to move them. Uses the Spike B design: plain Instances, pooled
 -- markers, only visible rows and time range drawn, render at most once per frame.
 
 local RunService = game:GetService("RunService")
@@ -16,6 +17,8 @@ local NAME_WIDTH = 170
 local MARKER_SIZE = 9
 local SCROLLBAR = 8
 local MIN_PPS, MAX_PPS = 20, 3000
+local HIT_RADIUS = 7 -- px around a marker that counts as clicking it
+local DRAG_THRESHOLD = 4 -- px of movement before a click becomes a drag
 local TICK_STEPS = { 1 / 30, 0.1, 0.25, 0.5, 1, 2, 5, 10 }
 
 local Timeline = {}
@@ -57,6 +60,10 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 	local dirty = true
 	local rowsDirty = true
 	local scrubbing = false
+	-- Dragging selected keyframes sideways: `delta` is the preview offset in seconds.
+	local keyDrag: { startX: number, delta: number, moved: boolean, clickedTime: number }? = nil
+	-- Rubber-band selection in lane coordinates.
+	local boxSelect: { x0: number, y0: number, x1: number, y1: number, additive: boolean, moved: boolean }? = nil
 
 	local colors = {
 		background = Theme.color(Enum.StudioStyleGuideColor.MainBackground),
@@ -65,6 +72,7 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 		selectedRow = Theme.color(Enum.StudioStyleGuideColor.Item, Enum.StudioStyleGuideModifier.Selected),
 		marker = Theme.color(Enum.StudioStyleGuideColor.LinkText),
 		selectedMarker = Color3.fromRGB(255, 170, 40),
+		selectedKey = Color3.fromRGB(255, 255, 255),
 		outOfRange = Color3.new(0, 0, 0),
 		dim = Theme.color(Enum.StudioStyleGuideColor.DimmedText),
 	}
@@ -141,6 +149,15 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 	local lanesEnd = rulerEnd:Clone()
 	lanesEnd.ZIndex = 3
 	lanesEnd.Parent = lanes
+
+	local selectionBox = Instance.new("Frame")
+	selectionBox.Name = "SelectionBox"
+	selectionBox.BackgroundColor3 = Color3.fromRGB(80, 160, 255)
+	selectionBox.BackgroundTransparency = 0.75
+	selectionBox.BorderSizePixel = 0
+	selectionBox.ZIndex = 6
+	selectionBox.Visible = false
+	selectionBox.Parent = lanes
 
 	local playhead = Instance.new("Frame")
 	playhead.Name = "Playhead"
@@ -285,15 +302,25 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 			local name = session.jointOrder[row].name
 			local track = clip.tracks[name]
 			if track then
-				local color = if name == session.selectedJoint then colors.selectedMarker else colors.marker
+				local rowColor = if name == session.selectedJoint then colors.selectedMarker else colors.marker
 				local keyframes = track.keyframes
-				local index = lowerBound(keyframes, viewStart - 1 / clip.fps)
+				local dragDelta = if keyDrag then keyDrag.delta else 0
+				-- Widen the window by the drag offset so dragged keys stay visible.
+				local index = lowerBound(keyframes, viewStart - 1 / clip.fps - math.abs(dragDelta))
 				local y = (row - 1) * ROW_HEIGHT + ROW_HEIGHT / 2
-				while index <= #keyframes and keyframes[index].time <= viewEnd do
+				while index <= #keyframes and keyframes[index].time <= viewEnd + math.abs(dragDelta) do
+					local time = keyframes[index].time
+					local selected = session:isKeySelected(name, time)
+					if selected then
+						time += dragDelta
+					end
 					used += 1
 					local marker = getMarker(used)
-					marker.Position = UDim2.fromOffset((keyframes[index].time - viewStart) * pps, y)
-					marker.BackgroundColor3 = color
+					marker.Position = UDim2.fromOffset((time - viewStart) * pps, y)
+					marker.BackgroundColor3 = if selected then colors.selectedKey else rowColor
+					marker.Size = if selected
+						then UDim2.fromOffset(MARKER_SIZE + 3, MARKER_SIZE + 3)
+						else UDim2.fromOffset(MARKER_SIZE, MARKER_SIZE)
 					marker.Visible = true
 					index += 1
 				end
@@ -327,6 +354,14 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 			tickPool[index].Visible = false
 		end
 		ticksInUse = tickCount
+
+		-- Rubber band
+		local box = boxSelect
+		selectionBox.Visible = box ~= nil and box.moved
+		if box then
+			selectionBox.Position = UDim2.fromOffset(math.min(box.x0, box.x1), math.min(box.y0, box.y1))
+			selectionBox.Size = UDim2.fromOffset(math.abs(box.x1 - box.x0), math.abs(box.y1 - box.y0))
+		end
 
 		-- Playhead
 		local x = (session.time - viewStart) * pps
@@ -372,32 +407,182 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 			end
 		end)
 	)
-	-- Clicking in a lane selects that joint and moves the playhead there.
+	local function lanePoint(input: InputObject): (number, number)
+		return input.Position.X - lanes.AbsolutePosition.X, input.Position.Y - lanes.AbsolutePosition.Y
+	end
+
+	-- The keyframe under a lane point, if any (within HIT_RADIUS pixels).
+	local function hitKey(x: number, y: number): Session.KeyRef?
+		local clip = session.clip
+		local entry = session.jointOrder[math.floor(y / ROW_HEIGHT) + 1]
+		local track = clip and entry and clip.tracks[entry.name]
+		if not (entry and track) then
+			return nil
+		end
+		local time = timeAtX(x)
+		local keyframes = track.keyframes
+		local index = lowerBound(keyframes, time)
+		local best: number? = nil
+		for _, candidate in { index - 1, index } do
+			local keyframe = keyframes[candidate]
+			if keyframe and math.abs(keyframe.time - time) * pps <= HIT_RADIUS then
+				if best == nil or math.abs(keyframe.time - time) < math.abs(best - time) then
+					best = keyframe.time
+				end
+			end
+		end
+		return if best then { joint = entry.name, time = best } else nil
+	end
+
+	local function isAdditive(input: InputObject): boolean
+		return input:IsModifierKeyDown(Enum.ModifierKey.Shift) or input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
+	end
+
 	table.insert(
 		connections,
 		lanes.InputBegan:Connect(function(input)
-			if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+			if input.UserInputType ~= Enum.UserInputType.MouseButton1 or not session.clip then
 				return
 			end
-			local row = math.floor((input.Position.Y - lanes.AbsolutePosition.Y) / ROW_HEIGHT) + 1
-			local entry = session.jointOrder[row]
+			session:pause()
+			local x, y = lanePoint(input)
+			local entry = session.jointOrder[math.floor(y / ROW_HEIGHT) + 1]
 			if entry then
 				session:selectJoint(entry.name)
 			end
-			session:pause()
-			session:setTime(timeAtX(input.Position.X - lanes.AbsolutePosition.X))
+
+			local key = hitKey(x, y)
+			if key then
+				if isAdditive(input) then
+					session:addKeySelection({ key }, true)
+				elseif not session:isKeySelected(key.joint, key.time) then
+					session:setKeySelection({ key })
+				end
+				if session:isKeySelected(key.joint, key.time) then
+					keyDrag = { startX = x, delta = 0, moved = false, clickedTime = key.time }
+				end
+			else
+				boxSelect = { x0 = x, y0 = y, x1 = x, y1 = y, additive = isAdditive(input), moved = false }
+			end
+			dirty = true
 		end)
 	)
-	for _, frame in { root, ruler } do
-		table.insert(
-			connections,
-			frame.InputEnded:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					scrubbing = false
+
+	table.insert(
+		connections,
+		root.InputChanged:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement then
+				return
+			end
+			local x, y = lanePoint(input)
+			local clip = session.clip
+			if keyDrag and clip then
+				if math.abs(x - keyDrag.startX) >= DRAG_THRESHOLD then
+					keyDrag.moved = true
 				end
-			end)
-		)
+				if keyDrag.moved then
+					keyDrag.delta = math.round((x - keyDrag.startX) / pps * clip.fps) / clip.fps
+					dirty = true
+				end
+			elseif boxSelect then
+				boxSelect.x1, boxSelect.y1 = x, y
+				if math.abs(x - boxSelect.x0) + math.abs(y - boxSelect.y0) >= DRAG_THRESHOLD then
+					boxSelect.moved = true
+				end
+				dirty = true
+			end
+		end)
+	)
+
+	local function finishPointer(input: InputObject)
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+			return
+		end
+		scrubbing = false
+
+		local drag = keyDrag
+		keyDrag = nil
+		if drag then
+			if drag.moved and drag.delta ~= 0 then
+				session:moveSelectedKeys(drag.delta)
+			elseif not drag.moved then
+				session:setTime(drag.clickedTime)
+			end
+			dirty = true
+		end
+
+		local box = boxSelect
+		boxSelect = nil
+		if box then
+			if box.moved then
+				-- Select every keyframe inside the rectangle.
+				local clip = session.clip
+				local refs: { Session.KeyRef } = {}
+				local t0, t1 = timeAtX(math.min(box.x0, box.x1)), timeAtX(math.max(box.x0, box.x1))
+				local firstRow = math.max(1, math.floor(math.min(box.y0, box.y1) / ROW_HEIGHT) + 1)
+				local lastRow = math.min(#session.jointOrder, math.floor(math.max(box.y0, box.y1) / ROW_HEIGHT) + 1)
+				for row = firstRow, lastRow do
+					local name = session.jointOrder[row].name
+					local track = clip and clip.tracks[name]
+					if track then
+						for _, keyframe in track.keyframes do
+							if keyframe.time >= t0 and keyframe.time <= t1 then
+								table.insert(refs, { joint = name, time = keyframe.time })
+							end
+						end
+					end
+				end
+				if box.additive then
+					session:addKeySelection(refs)
+				else
+					session:setKeySelection(refs)
+				end
+			else
+				-- Plain click on empty space: clear the key selection and move the playhead.
+				if not box.additive then
+					session:setKeySelection({})
+				end
+				session:setTime(timeAtX(box.x0))
+			end
+			dirty = true
+		end
 	end
+
+	for _, frame in { root, ruler, lanes } do
+		table.insert(connections, frame.InputEnded:Connect(finishPointer))
+	end
+
+	-- Keyboard shortcuts while the mouse is over the timeline.
+	table.insert(
+		connections,
+		root.InputBegan:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.Keyboard then
+				return
+			end
+			local ctrl = input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
+			local shift = input:IsModifierKeyDown(Enum.ModifierKey.Shift)
+			local key = input.KeyCode
+			if key == Enum.KeyCode.Delete or key == Enum.KeyCode.Backspace then
+				session:deleteSelectedKeys()
+			elseif ctrl and key == Enum.KeyCode.C then
+				session:copy()
+			elseif ctrl and key == Enum.KeyCode.V then
+				session:paste()
+			elseif key == Enum.KeyCode.Right then
+				if shift then
+					session:jumpToKey(1)
+				else
+					session:stepFrame(1)
+				end
+			elseif key == Enum.KeyCode.Left then
+				if shift then
+					session:jumpToKey(-1)
+				else
+					session:stepFrame(-1)
+				end
+			end
+		end)
+	)
 	table.insert(
 		connections,
 		body:GetPropertyChangedSignal("CanvasPosition"):Connect(function()

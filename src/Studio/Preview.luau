@@ -73,6 +73,11 @@ function Preview._restC0(self: Preview, joint: Motor6D): CFrame
 	return rest
 end
 
+-- The joint's rest C0 (its C0 before Animora posed it).
+function Preview.restC0(self: Preview, joint: Motor6D): CFrame
+	return self:_restC0(joint)
+end
+
 -- Shows a single static pose (used while editing). Call restore() to undo it.
 function Preview.showPose(self: Preview, pose: { [string]: CFrame })
 	self:_apply(pose)

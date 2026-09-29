@@ -19,7 +19,8 @@ local DevPanel = require(script.Parent.DevPanel)
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
 
-local TOOLBAR_HEIGHT = 34
+local ROW_HEIGHT = 34
+local TOOLBAR_HEIGHT = ROW_HEIGHT * 2
 
 local App = {}
 
@@ -186,6 +187,46 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		})
 	end)
 
+	local fpsText = scope:Computed(function(use)
+		use(language)
+		use(sessionTick)
+		local clip = session.clip
+		return Localization.t("editor.fps", { fps = if clip then clip.fps else "-" })
+	end)
+
+	local function row(order: number, children: { any })
+		local rowChildren: { any } = {
+			scope:New("UIPadding")({
+				PaddingLeft = UDim.new(0, Theme.PADDING),
+				PaddingRight = UDim.new(0, Theme.PADDING),
+			}),
+			scope:New("UIListLayout")({
+				FillDirection = Enum.FillDirection.Horizontal,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, Theme.PADDING / 2),
+			}),
+		}
+		for _, child in children do
+			table.insert(rowChildren, child)
+		end
+		return scope:New("Frame")({
+			LayoutOrder = order,
+			Size = UDim2.new(1, 0, 0, ROW_HEIGHT),
+			BackgroundTransparency = 1,
+			[Children] = rowChildren,
+		})
+	end
+
+	local function divider(order: number)
+		return scope:New("Frame")({
+			LayoutOrder = order,
+			Size = UDim2.fromOffset(1, 20),
+			BorderSizePixel = 0,
+			BackgroundColor3 = color(Enum.StudioStyleGuideColor.Border),
+		})
+	end
+
 	local playText = scope:Computed(function(use)
 		use(language)
 		use(sessionTick)
@@ -234,79 +275,150 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 				BackgroundColor3 = color(Enum.StudioStyleGuideColor.Titlebar),
 				BorderSizePixel = 0,
 				[Children] = {
-					scope:New("UIPadding")({
-						PaddingLeft = UDim.new(0, Theme.PADDING),
-						PaddingRight = UDim.new(0, Theme.PADDING),
-					}),
 					scope:New("UIListLayout")({
-						FillDirection = Enum.FillDirection.Horizontal,
-						VerticalAlignment = Enum.VerticalAlignment.Center,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, Theme.PADDING / 2),
 					}),
-					button({
-						order = 1,
-						width = 70,
-						text = playText,
-						onClick = function()
-							session:togglePlay()
-						end,
+					row(1, {
+						button({
+							order = 1,
+							width = 70,
+							text = playText,
+							onClick = function()
+								session:togglePlay()
+							end,
+						}),
+						button({
+							order = 2,
+							width = 60,
+							text = text("editor.undo"),
+							onClick = function()
+								session:undo()
+							end,
+						}),
+						button({
+							order = 3,
+							width = 60,
+							text = text("editor.redo"),
+							onClick = function()
+								session:redo()
+							end,
+						}),
+						scope:New("TextLabel")({
+							LayoutOrder = 4,
+							Size = UDim2.fromOffset(170, 26),
+							BackgroundTransparency = 1,
+							FontFace = Theme.FONT,
+							TextSize = Theme.TEXT_SIZE,
+							TextXAlignment = Enum.TextXAlignment.Center,
+							Text = timeText,
+							TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
+						}),
+						scope:New("TextLabel")({
+							LayoutOrder = 5,
+							Size = UDim2.new(1, -620, 0, 26),
+							BackgroundTransparency = 1,
+							FontFace = Theme.FONT,
+							TextSize = Theme.TEXT_SIZE,
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							Text = statusText,
+							TextColor3 = color(Enum.StudioStyleGuideColor.DimmedText),
+						}),
+						languageButton("en", 6),
+						languageButton("id", 7),
+						button({
+							order = 8,
+							width = 50,
+							text = "Dev",
+							selected = devMode,
+							onClick = function()
+								local enable = not Fusion.peek(devMode)
+								if enable then
+									-- Spike tools pose rigs themselves; release the editor's rig first.
+									session:setRig(nil)
+								end
+								devMode:set(enable)
+								if not enable then
+									onSelectionChanged()
+								end
+							end,
+						}),
 					}),
-					button({
-						order = 2,
-						width = 60,
-						text = text("editor.undo"),
-						onClick = function()
-							session:undo()
-						end,
-					}),
-					button({
-						order = 3,
-						width = 60,
-						text = text("editor.redo"),
-						onClick = function()
-							session:redo()
-						end,
-					}),
-					scope:New("TextLabel")({
-						LayoutOrder = 4,
-						Size = UDim2.fromOffset(170, 26),
-						BackgroundTransparency = 1,
-						FontFace = Theme.FONT,
-						TextSize = Theme.TEXT_SIZE,
-						TextXAlignment = Enum.TextXAlignment.Center,
-						Text = timeText,
-						TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
-					}),
-					scope:New("TextLabel")({
-						LayoutOrder = 5,
-						Size = UDim2.new(1, -620, 0, 26),
-						BackgroundTransparency = 1,
-						FontFace = Theme.FONT,
-						TextSize = Theme.TEXT_SIZE,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						TextTruncate = Enum.TextTruncate.AtEnd,
-						Text = statusText,
-						TextColor3 = color(Enum.StudioStyleGuideColor.DimmedText),
-					}),
-					languageButton("en", 6),
-					languageButton("id", 7),
-					button({
-						order = 8,
-						width = 50,
-						text = "Dev",
-						selected = devMode,
-						onClick = function()
-							local enable = not Fusion.peek(devMode)
-							if enable then
-								-- Spike tools pose rigs themselves; release the editor's rig first.
-								session:setRig(nil)
-							end
-							devMode:set(enable)
-							if not enable then
-								onSelectionChanged()
-							end
-						end,
+					row(2, {
+						button({
+							order = 1,
+							width = 34,
+							text = "|<",
+							onClick = function()
+								session:jumpToKey(-1)
+							end,
+						}),
+						button({
+							order = 2,
+							width = 34,
+							text = "<",
+							onClick = function()
+								session:stepFrame(-1)
+							end,
+						}),
+						button({
+							order = 3,
+							width = 34,
+							text = ">",
+							onClick = function()
+								session:stepFrame(1)
+							end,
+						}),
+						button({
+							order = 4,
+							width = 34,
+							text = ">|",
+							onClick = function()
+								session:jumpToKey(1)
+							end,
+						}),
+						divider(5),
+						button({
+							order = 6,
+							width = 60,
+							text = text("editor.copy"),
+							onClick = function()
+								session:copy()
+							end,
+						}),
+						button({
+							order = 7,
+							width = 60,
+							text = text("editor.paste"),
+							onClick = function()
+								session:paste()
+							end,
+						}),
+						button({
+							order = 8,
+							width = 60,
+							text = text("editor.delete"),
+							onClick = function()
+								session:deleteSelectedKeys()
+							end,
+						}),
+						button({
+							order = 9,
+							width = 70,
+							text = text("editor.mirror"),
+							onClick = function()
+								session:mirror()
+							end,
+						}),
+						divider(10),
+						button({
+							order = 11,
+							width = 70,
+							text = fpsText,
+							onClick = function()
+								session:cycleFps()
+							end,
+						}),
 					}),
 				},
 			}),

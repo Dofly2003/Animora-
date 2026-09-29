@@ -20,4 +20,15 @@ function Mirror.mirrorTransform(transform: CFrame): CFrame
 	return CFrame.new(-x, y, z, r00, -r01, -r02, -r10, r11, r12, -r20, r21, r22)
 end
 
+-- Mirrors a joint Transform onto the opposite joint. Left and right joints can have
+-- different rest orientations (R6 shoulders are turned +/-90 degrees), so the
+-- transform is moved into the parent part's space, mirrored there, and moved into
+-- the opposite joint's space. `fromRest` / `toRest` are the joints' rest C0s.
+function Mirror.mirrorJointTransform(transform: CFrame, fromRest: CFrame, toRest: CFrame): CFrame
+	local fromRotation = fromRest.Rotation
+	local toRotation = toRest.Rotation
+	local inParent = fromRotation * transform * fromRotation:Inverse()
+	return toRotation:Inverse() * Mirror.mirrorTransform(inParent) * toRotation
+end
+
 return Mirror

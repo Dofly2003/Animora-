@@ -24,6 +24,11 @@ return {
 	["editor.play"] = "Putar",
 	["editor.pause"] = "Jeda",
 	["editor.undo"] = "Undo",
+	["editor.fps"] = "{fps} FPS",
+	["editor.copy"] = "Salin",
+	["editor.paste"] = "Tempel",
+	["editor.delete"] = "Hapus",
+	["editor.mirror"] = "Cermin",
 	["editor.redo"] = "Redo",
 
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",

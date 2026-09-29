@@ -22,6 +22,19 @@ describe("Mirror.mirrorTransform", function()
 		expect(twice.LookVector:FuzzyEq(transform.LookVector, 1e-5)).toBe(true)
 	end)
 
+	it("mirrors between joints with different rest orientations (R6 shoulders)", function()
+		local rightRest = CFrame.new(1, 0.5, 0) * CFrame.Angles(0, math.pi / 2, 0)
+		local leftRest = CFrame.new(-1, 0.5, 0) * CFrame.Angles(0, -math.pi / 2, 0)
+		-- Raise the right arm sideways: rotation about the torso's Z axis.
+		local raiseInParent = CFrame.Angles(0, 0, math.rad(90))
+		local rightTransform = rightRest.Rotation:Inverse() * raiseInParent * rightRest.Rotation
+
+		local leftTransform = Mirror.mirrorJointTransform(rightTransform, rightRest, leftRest)
+		local leftInParent = leftRest.Rotation * leftTransform * leftRest.Rotation:Inverse()
+		-- The mirrored left arm raises sideways the other way: rotation of -90 degrees about Z.
+		expect(leftInParent:FuzzyEq(CFrame.Angles(0, 0, math.rad(-90)), 1e-4)).toBe(true)
+	end)
+
 	it("negates X position", function()
 		expect(Mirror.mirrorTransform(CFrame.new(2, 0, 0)).X).toBe(-2)
 	end)

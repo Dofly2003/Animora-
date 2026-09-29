@@ -24,6 +24,11 @@ return {
 	["editor.play"] = "Play",
 	["editor.pause"] = "Pause",
 	["editor.undo"] = "Undo",
+	["editor.fps"] = "{fps} FPS",
+	["editor.copy"] = "Copy",
+	["editor.paste"] = "Paste",
+	["editor.delete"] = "Delete",
+	["editor.mirror"] = "Mirror",
 	["editor.redo"] = "Redo",
 
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
