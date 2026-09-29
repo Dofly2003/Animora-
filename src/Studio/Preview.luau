@@ -1,8 +1,11 @@
 --!strict
--- Plays a clip on a rig in edit mode (no Play Solo) by sampling it every frame.
--- Write modes (Spike C, 2026-09-26):
---   "C0":        writes Motor6D.C0 = original C0 * transform, restored on stop. Default: works in edit mode.
---   "Transform": writes Motor6D.Transform. Not rendered in edit mode; only useful while the game runs.
+-- Shows poses on a rig in edit mode (no Play Solo) and plays clips by sampling them
+-- every frame. Write modes (Spike C, 2026-09-26):
+--   "C0":        edit-mode preview. Motor6D joints: C0 = rest C0 * transform (restored
+--                on stop). AnimationConstraint joints (Avatar Joint Upgrade) are not
+--                solved in edit mode, so their parts are placed directly with forward
+--                kinematics, parents first; stop places them back at the rest pose.
+--   "Transform": writes the joints' Transform. Only visible while the game runs.
 
 local RunService = game:GetService("RunService")
 
@@ -27,6 +30,9 @@ export type Preview = typeof(setmetatable(
 		startedAt: number,
 		_connection: RBXScriptConnection?,
 		_originalC0: { [Motor6D]: CFrame },
+		_order: { RigBinder.JointEntry },
+		_constraintPose: { [string]: CFrame },
+		_constraintPosed: boolean,
 	},
 	Preview
 ))
@@ -39,6 +45,9 @@ function Preview.new(binder: RigBinder.RigBinder, mode: Mode): Preview
 		startedAt = 0,
 		_connection = nil,
 		_originalC0 = {},
+		_order = binder:jointOrder(),
+		_constraintPose = {},
+		_constraintPosed = false,
 	}, Preview)
 end
 
@@ -46,16 +55,42 @@ function Preview.isPlaying(self: Preview): boolean
 	return self._connection ~= nil
 end
 
+-- Places every AnimationConstraint-driven part from the root outwards:
+-- Part1 = Part0 * Attachment0 * Transform * Attachment1:Inverse().
+function Preview._placeConstraintParts(self: Preview)
+	for _, entry in self._order do
+		local joint = self.binder.joints[entry.name]
+		if joint and joint.kind == "AnimationConstraint" then
+			local transform = self._constraintPose[entry.name] or CFrame.identity
+			joint.Part1.CFrame = joint.Part0.CFrame
+				* RigBinder.frame0(joint)
+				* transform
+				* RigBinder.frame1(joint):Inverse()
+		end
+	end
+end
+
 function Preview._apply(self: Preview, pose: { [string]: CFrame })
 	if self.mode == "Transform" then
 		self.binder:applyPose(pose)
 		return
 	end
+	local touchedConstraints = false
 	for jointName, transform in pose do
 		local joint = self.binder.joints[jointName]
 		if joint then
-			joint.C0 = self:_restC0(joint) * transform
+			if joint.kind == "Motor6D" then
+				local motor = joint.instance :: Motor6D
+				motor.C0 = self:_restC0(motor) * transform
+			else
+				self._constraintPose[jointName] = transform
+				touchedConstraints = true
+			end
 		end
+	end
+	if touchedConstraints then
+		self._constraintPosed = true
+		self:_placeConstraintParts()
 	end
 end
 
@@ -73,9 +108,13 @@ function Preview._restC0(self: Preview, joint: Motor6D): CFrame
 	return rest
 end
 
--- The joint's rest C0 (its C0 before Animora posed it).
-function Preview.restC0(self: Preview, joint: Motor6D): CFrame
-	return self:_restC0(joint)
+-- The joint's rest frame on Part0: its C0 before Animora posed it, or Attachment0's
+-- CFrame (Animora never changes attachments).
+function Preview.restC0(self: Preview, joint: RigBinder.Joint): CFrame
+	if joint.kind == "Motor6D" then
+		return self:_restC0(joint.instance :: Motor6D)
+	end
+	return RigBinder.frame0(joint)
 end
 
 -- Shows a single static pose (used while editing). Call restore() to undo it.
@@ -114,14 +153,19 @@ function Preview.stop(self: Preview)
 	end
 	if self.mode == "Transform" then
 		self.binder:resetPose()
-	else
-		for joint, originalC0 in self._originalC0 do
-			if joint.Parent then
-				joint.C0 = originalC0
-				joint:SetAttribute(REST_ATTRIBUTE, nil)
-			end
+		return
+	end
+	for joint, originalC0 in self._originalC0 do
+		if joint.Parent then
+			joint.C0 = originalC0
+			joint:SetAttribute(REST_ATTRIBUTE, nil)
 		end
-		table.clear(self._originalC0)
+	end
+	table.clear(self._originalC0)
+	if self._constraintPosed then
+		table.clear(self._constraintPose)
+		self:_placeConstraintParts()
+		self._constraintPosed = false
 	end
 end
 

@@ -35,6 +35,43 @@ local function makeRig(): (Model, Motor6D)
 	return model, shoulder
 end
 
+-- Same shape as an "Avatar Joint Upgrade" rig: AnimationConstraints between
+-- attachments instead of Motor6Ds. Returns the rig and its Arm part.
+local function makeConstraintRig(): (Model, BasePart)
+	local model = Instance.new("Model")
+	model.Name = "ConstraintRig"
+	local function part(name: string, cframe: CFrame): Part
+		local instance = Instance.new("Part")
+		instance.Name = name
+		instance.Size = Vector3.new(1, 1, 1)
+		instance.CFrame = cframe
+		instance.Parent = model
+		return instance
+	end
+	local root = part("Root", CFrame.new(0, 10, 0))
+	root.Anchored = true
+	local arm = part("Arm", CFrame.new(1, 10, 0))
+	local hand = part("Hand", CFrame.new(1, 9, 0))
+	local function link(name: string, part0: BasePart, offset0: CFrame, part1: BasePart, offset1: CFrame)
+		local attachment0 = Instance.new("Attachment")
+		attachment0.CFrame = offset0
+		attachment0.Parent = part0
+		local attachment1 = Instance.new("Attachment")
+		attachment1.CFrame = offset1
+		attachment1.Parent = part1
+		local constraint = Instance.new("AnimationConstraint")
+		constraint.Name = name
+		constraint.Attachment0 = attachment0
+		constraint.Attachment1 = attachment1
+		constraint.Parent = part1
+	end
+	-- Shoulder pivot at (1, 10.5, 0); wrist pivot at (1, 9.5, 0).
+	link("Shoulder", root, CFrame.new(1, 0.5, 0), arm, CFrame.new(0, 0.5, 0))
+	link("Wrist", arm, CFrame.new(0, -0.5, 0), hand, CFrame.new(0, 0.5, 0))
+	model.Parent = workspace
+	return model, arm
+end
+
 local rigs: { Model } = {}
 afterEach(function()
 	for _, rig in rigs do
@@ -217,6 +254,29 @@ describe("Session", function()
 		session:setRig(rig)
 		expect(session:cycleFps()).toBe(60)
 		expect(session:cycleFps()).toBe(24)
+		session:destroy()
+	end)
+
+	it("poses AnimationConstraint rigs by placing parts, children following", function()
+		local rig, arm = makeConstraintRig()
+		table.insert(rigs, rig)
+		local hand = rig:FindFirstChild("Hand") :: BasePart
+		local armRest, handRest = arm.CFrame, hand.CFrame
+
+		expect(RigBinder.isRig(rig)).toBe(true)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(#session.jointOrder).toBe(2)
+
+		-- Swing the arm 90 degrees about Z around the shoulder pivot.
+		session:commitJoint("Arm", CFrame.Angles(0, 0, math.rad(90)))
+		expect(arm.CFrame.Position:FuzzyEq(Vector3.new(1.5, 10.5, 0), 1e-3)).toBe(true)
+		-- The hand is re-placed from the moved arm, not left behind.
+		expect(hand.CFrame.Position:FuzzyEq(Vector3.new(2.5, 10.5, 0), 1e-3)).toBe(true)
+
+		session:setRig(nil)
+		expect(arm.CFrame:FuzzyEq(armRest, 1e-3)).toBe(true)
+		expect(hand.CFrame:FuzzyEq(handRest, 1e-3)).toBe(true)
 		session:destroy()
 	end)
 

@@ -22,7 +22,7 @@ local POSE_EASING_STYLE: { [Model.EasingStyle]: Enum.PoseEasingStyle } = {
 -- to them are written; untouched branches are left out to keep the asset small.
 local function buildPoseTree(
 	rootPart: BasePart,
-	joints: { [string]: Motor6D },
+	joints: { [string]: RigBinder.Joint },
 	valuesByJoint: { [string]: Model.Keyframe }
 ): Pose
 	local function build(part: BasePart): Pose?
@@ -68,9 +68,9 @@ end
 
 -- Exports a clip as a KeyframeSequence (not parented anywhere). Pass a baked clip
 -- (Core/Bake) so every easing style survives export; see Bake.luau for why.
-function IO.exportKeyframeSequence(clip: Model.Clip, joints: { [string]: Motor6D }): KeyframeSequence
+function IO.exportKeyframeSequence(clip: Model.Clip, joints: { [string]: RigBinder.Joint }): KeyframeSequence
 	local rootPart = RigBinder.findRootPart(joints)
-	assert(rootPart, "Rig has no Motor6D joint tree")
+	assert(rootPart, "Rig has no joint tree")
 
 	local sequence = Instance.new("KeyframeSequence")
 	sequence.Name = clip.name

@@ -47,7 +47,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local devMode = scope:Value(false)
 	-- Bumped on every session change so toolbar texts recompute.
 	local sessionTick = scope:Value(0)
-	-- Short message shown in the status bar (e.g. "this model has no Motor6D joints").
+	-- Short message shown in the status bar (e.g. "this model has no joints").
 	local notice = scope:Value(nil :: { key: string, args: { [string]: any }? }?)
 
 	local cleanups: { () -> () } = {}

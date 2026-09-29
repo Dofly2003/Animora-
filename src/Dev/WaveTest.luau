@@ -40,7 +40,7 @@ function WaveTest.buildClip(binder: RigBinder.RigBinder): (Model.Clip?, string?)
 
 	-- A rotation R about the torso's Z axis becomes Transform = C0rot^-1 * R * C0rot,
 	-- which works for both R15 and R6 even though their C0 orientations differ.
-	local c0Rotation = binder.joints[jointName].C0.Rotation
+	local c0Rotation = RigBinder.frame0(binder.joints[jointName]).Rotation
 	local function sideways(degrees: number): CFrame
 		return c0Rotation:Inverse() * CFrame.Angles(0, 0, math.rad(degrees)) * c0Rotation
 	end

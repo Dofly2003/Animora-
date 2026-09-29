@@ -2,13 +2,15 @@
 -- Rotate handles (ArcHandles in CoreGui) on the selected joint's part. Dragging
 -- previews the rotation live; releasing stores a keyframe at the current time.
 --
--- Math: Part1 = Part0 * C0 * T * C1:Inverse(). Rotating Part1 about one of its own
--- axes `a` around the joint pivot means T' = T * R, where R rotates about
--- C1.Rotation:Inverse() * a (the same axis expressed in the joint frame).
+-- Math: Part1 = Part0 * C0 * T * C1:Inverse() (C0/C1 are the attachment frames for
+-- AnimationConstraints). Rotating Part1 about one of its own axes `a` around the joint
+-- pivot means T' = T * R, where R rotates about C1.Rotation:Inverse() * a (the same
+-- axis expressed in the joint frame).
 
 local CoreGui = game:GetService("CoreGui")
 
 local Session = require(script.Parent.Session)
+local RigBinder = require(script.Parent.RigBinder)
 
 local Gizmo = {}
 Gizmo.__index = Gizmo
@@ -62,7 +64,7 @@ function Gizmo.new(session: Session.Session): Gizmo
 			if not (drag and joint) then
 				return
 			end
-			local jointAxis = joint.C1.Rotation:Inverse() * Vector3.FromAxis(axis)
+			local jointAxis = RigBinder.frame1(joint).Rotation:Inverse() * Vector3.FromAxis(axis)
 			local value = drag.start * CFrame.fromAxisAngle(jointAxis, relativeAngle)
 			drag.last = value
 			session:previewJoint(drag.jointName, value)

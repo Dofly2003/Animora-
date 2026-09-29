@@ -26,7 +26,7 @@ export type Keyframe = {
 }
 
 export type Track = {
-	jointName: string, -- name of the Motor6D's Part1 (e.g. "LeftUpperArm")
+	jointName: string, -- name of the joint's Part1 (e.g. "LeftUpperArm")
 	keyframes: { Keyframe }, -- always sorted by time
 }
 
