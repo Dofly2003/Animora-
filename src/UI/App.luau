@@ -27,6 +27,8 @@ local App = {}
 
 export type AppHandle = {
 	session: Session.Session,
+	-- Shows a short message in the status bar (cleared by the next rig selection).
+	notify: (key: string, args: { [string]: any }?) -> (),
 	destroy: (self: AppHandle) -> (),
 }
 
@@ -454,7 +456,12 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local timeline = Timeline.mount(timelineHost, session)
 	onSelectionChanged()
 
-	local handle = { session = session }
+	local handle = {
+		session = session,
+		notify = function(key: string, args: { [string]: any }?)
+			notice:set({ key = key, args = args })
+		end,
+	}
 	function handle.destroy(_self: AppHandle)
 		for _, cleanup in cleanups do
 			cleanup()

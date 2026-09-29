@@ -32,6 +32,9 @@ return {
 	["editor.mirror"] = "Mirror",
 	["editor.redo"] = "Redo",
 
+	["shortcut.ran"] = "Shortcut: {name}",
+	["shortcut.needsRig"] = "Shortcut {name} received, but open the Animora panel and select a rig first.",
+
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",

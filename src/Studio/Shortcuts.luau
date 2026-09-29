@@ -85,15 +85,23 @@ local ACTIONS: { ActionSpec } = {
 	},
 }
 
--- Registers every action; they only act while the Animora panel is open.
-function Shortcuts.register(pluginRef: Plugin, widget: PluginGui, getSession: () -> Session.Session?)
+-- Registers every action; they only act while the Animora panel is open. `report` is
+-- told which shortcut fired and whether it ran, so the status bar can confirm it.
+function Shortcuts.register(
+	pluginRef: Plugin,
+	widget: PluginGui,
+	getSession: () -> Session.Session?,
+	report: (text: string, ran: boolean) -> ()
+)
 	for _, spec in ACTIONS do
 		local action = pluginRef:CreatePluginAction(spec.id, spec.text, spec.tip, "", true)
 		action.Triggered:Connect(function()
 			local session = getSession()
-			if widget.Enabled and session and session.rig then
+			local canRun = widget.Enabled and session ~= nil and session.rig ~= nil
+			if canRun and session then
 				spec.run(session)
 			end
+			report(spec.text, canRun)
 		end)
 	end
 end

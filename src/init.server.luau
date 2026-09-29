@@ -49,6 +49,8 @@ local app = App.mount(widget, pluginSettings, { openTimelineTest = openTimelineT
 
 Shortcuts.register(plugin, widget, function()
 	return app.session
+end, function(text, ran)
+	app.notify(if ran then "shortcut.ran" else "shortcut.needsRig", { name = text })
 end)
 
 toggleButton.Click:Connect(function()

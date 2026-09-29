@@ -32,6 +32,9 @@ return {
 	["editor.mirror"] = "Cermin",
 	["editor.redo"] = "Redo",
 
+	["shortcut.ran"] = "Shortcut: {name}",
+	["shortcut.needsRig"] = "Shortcut {name} diterima, tapi buka panel Animora dan pilih rig dulu.",
+
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",
