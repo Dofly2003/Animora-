@@ -1,9 +1,10 @@
 --!strict
 -- Animations panel docked at the bottom of the timeline: the rig's animation list
--- (click one to edit it) with New, Duplicate, Rename and Delete. All list changes are
+-- (click one to edit it) with New, Duplicate, Rename, Delete and starter templates. All list changes are
 -- undoable with Ctrl+Z and saved in the place.
 
 local Localization = require(script.Parent.Parent.Localization)
+local Templates = require(script.Parent.Parent.Core.Templates)
 local Session = require(script.Parent.Parent.Studio.Session)
 local Theme = require(script.Parent.Theme)
 
@@ -17,7 +18,7 @@ export type Handle = {
 }
 
 local ROW = 26
-local HEIGHT = 190
+local HEIGHT = 220
 local LIST_WIDTH = 260
 
 function AnimationsMenu.mount(
@@ -129,9 +130,31 @@ function AnimationsMenu.mount(
 	local renameButton =
 		newButton(actions, { Position = UDim2.fromOffset(232, ROW + 6), Size = UDim2.fromOffset(110, ROW - 2) })
 
+	-- Starter templates
+	local templateLabel = Instance.new("TextLabel")
+	templateLabel.BackgroundTransparency = 1
+	templateLabel.Position = UDim2.fromOffset(0, (ROW + 6) * 2)
+	templateLabel.Size = UDim2.fromOffset(90, ROW - 2)
+	templateLabel.FontFace = Theme.FONT
+	templateLabel.TextSize = Theme.TEXT_SIZE
+	templateLabel.TextXAlignment = Enum.TextXAlignment.Left
+	templateLabel.TextColor3 = Theme.color(Enum.StudioStyleGuideColor.MainText)
+	templateLabel.ZIndex = 22
+	templateLabel.Parent = actions
+	local templateButtons: { TextButton } = {}
+	for index, template in Templates.list() do
+		local templateButton = newButton(actions, {
+			Position = UDim2.fromOffset(90 + (index - 1) * 64, (ROW + 6) * 2),
+			Size = UDim2.fromOffset(60, ROW - 2),
+			Text = template.name,
+		})
+		templateButton:SetAttribute("TemplateId", template.id)
+		table.insert(templateButtons, templateButton)
+	end
+
 	local hint = Instance.new("TextLabel")
 	hint.BackgroundTransparency = 1
-	hint.Position = UDim2.fromOffset(0, (ROW + 6) * 2)
+	hint.Position = UDim2.fromOffset(0, (ROW + 6) * 3)
 	hint.Size = UDim2.new(1, 0, 0, ROW * 2)
 	hint.FontFace = Theme.FONT
 	hint.TextSize = Theme.TEXT_SIZE - 1
@@ -181,6 +204,7 @@ function AnimationsMenu.mount(
 		renameButton.Text = Localization.t("animations.rename")
 		nameBox.PlaceholderText = Localization.t("animations.namePlaceholder")
 		hint.Text = Localization.t("animations.hint")
+		templateLabel.Text = Localization.t("animations.fromTemplate")
 		refresh()
 	end
 	applyTexts()
@@ -232,6 +256,19 @@ function AnimationsMenu.mount(
 		end)
 	)
 	table.insert(connections, renameButton.Activated:Connect(rename))
+	for _, templateButton in templateButtons do
+		table.insert(
+			connections,
+			templateButton.Activated:Connect(function()
+				local clip = session:newAnimationFromTemplate(templateButton:GetAttribute("TemplateId") :: string)
+				if clip then
+					notify("animations.templateCreated", { name = clip.name })
+				else
+					notify("animations.templateUnsupported")
+				end
+			end)
+		)
+	end
 	table.insert(
 		connections,
 		nameBox.FocusLost:Connect(function(enterPressed)

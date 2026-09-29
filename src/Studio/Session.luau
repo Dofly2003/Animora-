@@ -14,6 +14,7 @@ local Interpolate = require(script.Parent.Parent.Core.Interpolate)
 local Commands = require(script.Parent.Parent.Core.Commands)
 local Signal = require(script.Parent.Parent.Core.Signal)
 local Mirror = require(script.Parent.Parent.Core.Mirror)
+local Templates = require(script.Parent.Parent.Core.Templates)
 local Bake = require(script.Parent.Parent.Core.Bake)
 local RigBinder = require(script.Parent.RigBinder)
 local Preview = require(script.Parent.Preview)
@@ -998,6 +999,31 @@ function Session.deleteAnimation(self: Session): string?
 		end,
 	})
 	return clip.name
+end
+
+-- Creates a new animation from a starter template (Idle, Walk, Run, Jump, Wave) fitted
+-- to this rig's joints (undoable) and switches to it. Nil when the rig has none of the
+-- template's joints.
+function Session.newAnimationFromTemplate(self: Session, templateId: string): Model.Clip?
+	local binder = self.binder
+	local preview = self._preview
+	local template = Templates.get(templateId)
+	if not (binder and preview and template) then
+		return nil
+	end
+	local clip = Templates.build(template, function(name)
+		return binder.joints[name] ~= nil
+	end, function(name)
+		return preview:restC0(binder.joints[name])
+	end, DEFAULT_FPS)
+	if next(clip.tracks) == nil then
+		return nil
+	end
+	clip.id = newId()
+	clip.name = self:uniqueName(template.name)
+	self:_insertAnimation("New animation from template", clip, #self.clips + 1)
+	self:setTime(0)
+	return clip
 end
 
 function Session.destroy(self: Session)

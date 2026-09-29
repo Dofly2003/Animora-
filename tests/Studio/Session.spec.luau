@@ -400,6 +400,23 @@ describe("Session", function()
 		session:destroy()
 	end)
 
+	it("creates an animation from a template and undo removes it", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		local clip = session:newAnimationFromTemplate("Idle") :: any
+		expect(clip).never.toBeNil()
+		expect(clip.name).toBe("Idle")
+		expect(session.clip).toBe(clip)
+		expect(clip.tracks.Head).never.toBeNil()
+		expect(#session.clips).toBe(2)
+
+		session:undo()
+		expect(#session.clips).toBe(1)
+		session:destroy()
+	end)
+
 	it("changes the clip length and undo restores it", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)
