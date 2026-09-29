@@ -19,8 +19,9 @@ Fill in each spike after trying it. These decide the approach for Phase 1.
 - Goal: timeline widget with 30 tracks x 200 keyframes; scroll, zoom, scrub.
 - Pass if: stays above 30 fps while scrubbing; scrub-to-pose under 16 ms.
 - How to run: Animora panel > **Timeline test** opens a floating window (30 tracks x 200 keys, virtualized). Drag on the ruler to scrub, wheel to zoom, Shift+wheel to pan, then press **Run auto test (6 s)**. The result line is also printed to Output as `[Animora Spike B]`.
-- Result: _not started_
+- Result: **Pass** (2026-09-29). Scrubbing, zooming and panning 30 x 200 keys feel smooth with no stutter (tester report; exact auto-test numbers not recorded).
 - Notes:
+    - Decision: the real timeline keeps this design: plain Instances for the keyframe area, pooled markers, draw only visible rows and time range, render at most once per frame when dirty.
 
 ## C. Edit-mode pose preview
 
