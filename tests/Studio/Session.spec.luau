@@ -319,6 +319,32 @@ describe("Session", function()
 		session:destroy()
 	end)
 
+	it("sets easing on selected keyframes and it shapes the motion", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		session:setTime(0)
+		session:commitJoint("Arm", CFrame.new(0, 0, 0))
+		session:setTime(1)
+		session:commitJoint("Arm", CFrame.new(0, 10, 0))
+
+		expect(session:setEasing("Quad", "In")).toBe(0) -- nothing selected yet
+		session:setKeySelection({ { joint = "Arm", time = 0 } })
+		expect(session:setEasing("Quad", "In")).toBe(1)
+		local style, direction = session:selectedEasing()
+		expect(style).toBe("Quad")
+		expect(direction).toBe("In")
+
+		-- Quad In at the halfway point covers a quarter of the distance.
+		session:setTime(0.5)
+		expect(session:getJointTransform("Arm").Y).toBeCloseTo(2.5, 2)
+
+		session:undo()
+		expect((session:selectedEasing())).toBe("Linear")
+		session:destroy()
+	end)
+
 	it("changes the clip length and undo restores it", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)

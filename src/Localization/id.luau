@@ -56,6 +56,13 @@ return {
 	["import.loadFailed"] = "Gagal memuat animasi {id}: {reason}",
 	["import.curveUnsupported"] = "Animasi {id} berupa curve animation; untuk sekarang hanya animasi keyframe yang bisa diimpor.",
 
+	["easing.button"] = "Easing: {style} {direction}",
+	["easing.buttonEmpty"] = "Easing...",
+	["easing.title"] = "Easing untuk {count} keyframe terpilih - mengatur gerakan ke keyframe berikutnya",
+	["easing.noSelection"] = "Pilih keyframe dulu (klik, Shift+klik, atau seret kotak), lalu pilih easing.",
+	["easing.direction"] = "Arah:",
+	["easing.applied"] = "Easing {style} {direction} diterapkan ke {count} keyframe.",
+
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",

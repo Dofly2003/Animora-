@@ -19,6 +19,7 @@ local Storage = require(script.Parent.Parent.Studio.Storage)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 local ImportMenu = require(script.Parent.ImportMenu)
+local EasingMenu = require(script.Parent.EasingMenu)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -298,6 +299,17 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	-- Import: a KeyframeSequence selected in the Explorer is imported directly; otherwise
 	-- a menu lists the animations saved in the place and offers import by asset ID.
 	local importMenu: ImportMenu.Handle? = nil
+	local easingMenu: EasingMenu.Handle? = nil
+
+	local easingText = scope:Computed(function(use)
+		use(language)
+		use(sessionTick)
+		local style, direction = session:selectedEasing()
+		if style then
+			return Localization.t("easing.button", { style = style, direction = direction or "" })
+		end
+		return Localization.t("easing.buttonEmpty")
+	end)
 	local function importClip()
 		if not session.rig then
 			notice:set({ key = "editor.status.noRig" })
@@ -598,15 +610,29 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 								session:cyclePriority()
 							end,
 						}),
-						divider(6),
 						button({
-							order = 7,
+							order = 6,
+							width = 170,
+							text = easingText,
+							onClick = function()
+								if easingMenu then
+									if easingMenu:isOpen() then
+										easingMenu:close()
+									else
+										easingMenu:open()
+									end
+								end
+							end,
+						}),
+						divider(7),
+						button({
+							order = 8,
 							width = 70,
 							text = text("editor.export"),
 							onClick = exportClip,
 						}),
 						button({
-							order = 8,
+							order = 9,
 							width = 70,
 							text = text("editor.import"),
 							onClick = importClip,
@@ -620,6 +646,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	})
 
 	local timeline = Timeline.mount(timelineHost, session)
+	easingMenu = EasingMenu.mount(timelineHost, session, function(key, args)
+		notice:set({ key = key, args = args })
+	end)
 	importMenu = ImportMenu.mount(timelineHost, {
 		importSequence = importSequence,
 		notify = function(key, args)
@@ -642,6 +671,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		timeline:destroy()
 		if importMenu then
 			importMenu:destroy()
+		end
+		if easingMenu then
+			easingMenu:destroy()
 		end
 		picker:destroy()
 		gizmo:destroy()

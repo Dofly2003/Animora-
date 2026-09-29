@@ -632,6 +632,40 @@ function Session.mirror(self: Session): number
 	return #writes
 end
 
+-- Easing ----------------------------------------------------------------------------
+
+-- Easing of the first selected keyframe, for showing the current choice in the UI.
+function Session.selectedEasing(self: Session): (Model.EasingStyle?, Model.EasingDirection?)
+	local clip = self.clip
+	local ref = self.selectedKeys[1]
+	local keyframe = clip and ref and findKeyframe(clip.tracks[ref.joint], ref.time)
+	if keyframe then
+		return keyframe.easingStyle, keyframe.easingDirection
+	end
+	return nil, nil
+end
+
+-- Sets the easing (style and/or direction) of every selected keyframe. A keyframe's
+-- easing shapes the motion from it to the next keyframe. Returns how many changed.
+function Session.setEasing(self: Session, style: Model.EasingStyle?, direction: Model.EasingDirection?): number
+	local refs = self.selectedKeys
+	if #refs == 0 or not (style or direction) then
+		return 0
+	end
+	local changed = 0
+	self:_edit("Change easing", function(clip)
+		for _, ref in refs do
+			local keyframe = findKeyframe(clip.tracks[ref.joint], ref.time)
+			if keyframe then
+				keyframe.easingStyle = style or keyframe.easingStyle
+				keyframe.easingDirection = direction or keyframe.easingDirection
+				changed += 1
+			end
+		end
+	end)
+	return changed
+end
+
 -- Navigation ------------------------------------------------------------------------
 
 function Session.stepFrame(self: Session, frames: number)

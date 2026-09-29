@@ -56,6 +56,13 @@ return {
 	["import.loadFailed"] = "Could not load animation {id}: {reason}",
 	["import.curveUnsupported"] = "Animation {id} is a curve animation; only keyframe animations can be imported for now.",
 
+	["easing.button"] = "Easing: {style} {direction}",
+	["easing.buttonEmpty"] = "Easing...",
+	["easing.title"] = "Easing for {count} selected keyframe(s) - shapes the motion to the next keyframe",
+	["easing.noSelection"] = "Select keyframes first (click, Shift+click or drag a box), then pick an easing.",
+	["easing.direction"] = "Direction:",
+	["easing.applied"] = "Easing {style} {direction} set on {count} keyframe(s).",
+
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",
