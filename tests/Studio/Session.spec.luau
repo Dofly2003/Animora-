@@ -37,7 +37,7 @@ end
 
 -- Same shape as an "Avatar Joint Upgrade" rig: AnimationConstraints between
 -- attachments instead of Motor6Ds. Returns the rig and its Arm part.
-local function makeConstraintRig(): (Model, BasePart)
+local function makeConstraintRig(kinematic: boolean?): (Model, BasePart)
 	local model = Instance.new("Model")
 	model.Name = "ConstraintRig"
 	local function part(name: string, cframe: CFrame): Part
@@ -63,6 +63,10 @@ local function makeConstraintRig(): (Model, BasePart)
 		constraint.Name = name
 		constraint.Attachment0 = attachment0
 		constraint.Attachment1 = attachment1
+		if kinematic then
+			-- Kinematic constraints make the body one rigid assembly, like Motor6Ds.
+			(constraint :: any).IsKinematic = true
+		end
 		constraint.Parent = part1
 	end
 	-- Shoulder pivot at (1, 10.5, 0); wrist pivot at (1, 9.5, 0).
@@ -277,6 +281,25 @@ describe("Session", function()
 		session:setRig(nil)
 		expect(arm.CFrame:FuzzyEq(armRest, 1e-3)).toBe(true)
 		expect(hand.CFrame:FuzzyEq(handRest, 1e-3)).toBe(true)
+		session:destroy()
+	end)
+
+	it("poses rigid (kinematic) AnimationConstraint rigs through Attachment0", function()
+		local rig, arm = makeConstraintRig(true)
+		table.insert(rigs, rig)
+		local hand = rig:FindFirstChild("Hand") :: BasePart
+		local shoulderAttachment = (arm:FindFirstChild("Shoulder") :: any).Attachment0 :: Attachment
+		local attachmentRest = shoulderAttachment.CFrame
+
+		local session = Session.new()
+		session:setRig(rig)
+		session:commitJoint("Arm", CFrame.Angles(0, 0, math.rad(90)))
+		expect(arm.CFrame.Position:FuzzyEq(Vector3.new(1.5, 10.5, 0), 1e-3)).toBe(true)
+		expect(hand.CFrame.Position:FuzzyEq(Vector3.new(2.5, 10.5, 0), 1e-3)).toBe(true)
+
+		session:setRig(nil)
+		expect(shoulderAttachment.CFrame:FuzzyEq(attachmentRest, 1e-4)).toBe(true)
+		expect(shoulderAttachment:GetAttribute("AnimoraRestC0")).toBeNil()
 		session:destroy()
 	end)
 
