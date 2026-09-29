@@ -21,6 +21,7 @@ local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 local ImportMenu = require(script.Parent.ImportMenu)
 local EasingMenu = require(script.Parent.EasingMenu)
+local AnimationsMenu = require(script.Parent.AnimationsMenu)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -48,13 +49,13 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	-- Every edit becomes a Studio undo waypoint that also saves the clip into the place.
 	session.onEdit = function(name: string)
 		StudioUndo.record(name, function()
-			local rig, clip = session.rig, session.clip
-			if rig and clip then
-				Storage.saveClip(rig, clip)
+			local rig = session.rig
+			if rig then
+				Storage.saveClips(rig, session.clips)
 			end
 		end)
 	end
-	session.loadClip = Storage.loadClip
+	session.loadClips = Storage.loadClips
 	local gizmo = Gizmo.new(session)
 
 	local language = scope:Value(Localization.getLanguage())
@@ -308,6 +309,29 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	-- a menu lists the animations saved in the place and offers import by asset ID.
 	local importMenu: ImportMenu.Handle? = nil
 	local easingMenu: EasingMenu.Handle? = nil
+	local animationsMenu: AnimationsMenu.Handle? = nil
+
+	local animationText = scope:Computed(function(use)
+		use(language)
+		use(sessionTick)
+		local clip = session.clip
+		return Localization.t("animations.button", { name = if clip then clip.name else "-" })
+	end)
+
+	-- Only one bottom panel (easing / animations) at a time.
+	local function togglePanel(panel: any, other: any)
+		if not panel then
+			return
+		end
+		if panel:isOpen() then
+			panel:close()
+		else
+			if other then
+				other:close()
+			end
+			panel:open()
+		end
+	end
 
 	local easingText = scope:Computed(function(use)
 		use(language)
@@ -582,6 +606,14 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 						}),
 					}),
 					row(3, {
+						button({
+							order = 0,
+							width = 170,
+							text = animationText,
+							onClick = function()
+								togglePanel(animationsMenu, easingMenu)
+							end,
+						}),
 						scope:New("TextLabel")({
 							LayoutOrder = 1,
 							Size = UDim2.fromOffset(52, 26),
@@ -623,13 +655,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							width = 170,
 							text = easingText,
 							onClick = function()
-								if easingMenu then
-									if easingMenu:isOpen() then
-										easingMenu:close()
-									else
-										easingMenu:open()
-									end
-								end
+								togglePanel(easingMenu, animationsMenu)
 							end,
 						}),
 						divider(7),
@@ -657,6 +683,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	easingMenu = EasingMenu.mount(timelineHost, session, function(key, args)
 		notice:set({ key = key, args = args })
 	end)
+	animationsMenu = AnimationsMenu.mount(timelineHost, session, function(key, args)
+		notice:set({ key = key, args = args })
+	end)
 	importMenu = ImportMenu.mount(timelineHost, {
 		importSequence = importSequence,
 		notify = function(key, args)
@@ -682,6 +711,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		if easingMenu then
 			easingMenu:destroy()
+		end
+		if animationsMenu then
+			animationsMenu:destroy()
 		end
 		picker:destroy()
 		gizmo:destroy()

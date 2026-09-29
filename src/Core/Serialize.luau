@@ -11,6 +11,7 @@ Serialize.VERSION = 1
 export type SavedKeyframe = { t: number, cf: { number }, e: string, d: string }
 export type SavedClip = {
 	version: number,
+	id: string?,
 	name: string,
 	length: number,
 	fps: number,
@@ -35,6 +36,7 @@ function Serialize.encodeClip(clip: Model.Clip): SavedClip
 	end
 	return {
 		version = Serialize.VERSION,
+		id = clip.id,
 		name = clip.name,
 		length = clip.length,
 		fps = clip.fps,
@@ -50,6 +52,7 @@ function Serialize.decodeClip(data: any): Model.Clip?
 		return nil
 	end
 	local clip = Model.newClip(tostring(data.name or "Animation"), tonumber(data.fps) or 30)
+	clip.id = if type(data.id) == "string" then data.id else nil
 	clip.length = tonumber(data.length) or 2
 	clip.looped = data.looped == true
 	local ok, priority = pcall(function()

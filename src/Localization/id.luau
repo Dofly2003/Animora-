@@ -63,6 +63,18 @@ return {
 	["easing.direction"] = "Arah:",
 	["easing.applied"] = "Easing {style} {direction} diterapkan ke {count} keyframe.",
 
+	["animations.button"] = "Anim: {name}",
+	["animations.title"] = "Animasi {rig} ({count}) - klik salah satu untuk mengedit",
+	["animations.new"] = "Baru",
+	["animations.duplicate"] = "Duplikat",
+	["animations.delete"] = "Hapus",
+	["animations.rename"] = "Ganti nama",
+	["animations.namePlaceholder"] = "Nama animasi (mis. Walk)",
+	["animations.hint"] = "Setiap animasi tersimpan di place dan diekspor dengan namanya sendiri. Ctrl+Z juga membatalkan perubahan daftar.",
+	["animations.created"] = "{name} dibuat.",
+	["animations.deleted"] = "{name} dihapus (Ctrl+Z untuk membatalkan).",
+	["animations.renamed"] = "Nama diganti menjadi {name}.",
+
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",

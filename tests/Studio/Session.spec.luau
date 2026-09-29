@@ -345,6 +345,61 @@ describe("Session", function()
 		session:destroy()
 	end)
 
+	it("keeps several animations per rig with unique names", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(#session.clips).toBe(1)
+
+		local walk = session:newAnimation("Walk") :: any
+		expect(session.clip).toBe(walk)
+		expect(#session.clips).toBe(2)
+		expect((session:newAnimation("Walk") :: any).name).toBe("Walk 2")
+
+		expect(session:renameAnimation("Run")).toBe("Run")
+		expect((session.clip :: any).name).toBe("Run")
+		session:undo()
+		expect((session.clip :: any).name).toBe("Walk 2")
+		session:destroy()
+	end)
+
+	it("undo of an edit switches back to the animation it changed", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		local first = session.clip
+		session:commitJoint("Arm", CFrame.Angles(1, 0, 0))
+		local second = session:newAnimation("Idle")
+		expect(session.clip).toBe(second)
+
+		session:undo() -- undoes "New animation": back on the first
+		expect(session.clip).toBe(first)
+		session:undo() -- undoes the keyframe on the first animation
+		expect((session.clip :: any).tracks.Arm).toBeNil()
+		session:destroy()
+	end)
+
+	it("deleting the only animation leaves an empty one, and undo restores it", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		local original = session.clip
+		session:commitJoint("Arm", CFrame.Angles(1, 0, 0))
+
+		session:deleteAnimation()
+		expect(#session.clips).toBe(1)
+		expect(session.clip).never.toBe(original)
+		expect(next((session.clip :: any).tracks)).toBeNil()
+
+		session:undo()
+		expect(session.clip).toBe(original)
+		expect(#session.clips).toBe(1)
+		session:destroy()
+	end)
+
 	it("changes the clip length and undo restores it", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)
@@ -357,14 +412,14 @@ describe("Session", function()
 		session:destroy()
 	end)
 
-	it("loads a saved clip the first time a rig is opened", function()
+	it("loads saved animations the first time a rig is opened", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)
 		local saved = Model.newClip("Saved", 24)
 		Model.setKeyframe(Model.getOrCreateTrack(saved, "Arm"), Model.newKeyframe(0.25, CFrame.identity))
 		local session = Session.new()
-		session.loadClip = function()
-			return saved
+		session.loadClips = function()
+			return { saved }
 		end
 		session:setRig(rig)
 		expect(session.clip).toBe(saved)

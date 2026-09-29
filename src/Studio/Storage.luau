@@ -2,7 +2,9 @@
 -- Keeps Animora work inside the place so it travels with the .rbxl and Team Create:
 --   ServerStorage.AnimoraSaves.Rigs.<rig name>  Folder per rig with an ObjectValue
 --                                               "Rig" (points at the rig, survives
---                                               renames) and a StringValue "Clip" (JSON)
+--                                               renames) and an "Animations" folder
+--                                               holding one StringValue (JSON) per
+--                                               animation
 --   ServerStorage.RBX_ANIMSAVES.<rig name>      exported KeyframeSequences; the built-in
 --                                               Animation Editor lists and publishes them
 
@@ -52,44 +54,117 @@ local function findRigSave(rig: Model): Folder?
 	return nil
 end
 
--- Writes the rig's clip as JSON (creating its save folder on first save).
-function Storage.saveClip(rig: Model, clip: Model.Clip)
+local ID_ATTRIBUTE = "AnimoraId"
+
+-- The save folder for `rig`, created on demand.
+local function getOrCreateRigSave(rig: Model): Folder
 	local save = findRigSave(rig)
-	if not save then
-		local newSave = Instance.new("Folder")
-		newSave.Name = rig.Name
-		local link = Instance.new("ObjectValue")
-		link.Name = "Rig"
-		link.Value = rig
-		link.Parent = newSave
-		newSave.Parent = getOrCreateFolder(Storage.getFolder(), "Rigs")
-		save = newSave
+	if save then
+		return save
 	end
-	local folder = save :: Folder
-	local value = folder:FindFirstChild("Clip") :: StringValue?
-	if not value then
-		local newValue = Instance.new("StringValue")
-		newValue.Name = "Clip"
-		newValue.Parent = folder
-		value = newValue
-	end
-	local json = HttpService:JSONEncode(Serialize.encodeClip(clip));
-	(value :: StringValue).Value = json
+	local newSave = Instance.new("Folder")
+	newSave.Name = rig.Name
+	local link = Instance.new("ObjectValue")
+	link.Name = "Rig"
+	link.Value = rig
+	link.Parent = newSave
+	newSave.Parent = getOrCreateFolder(Storage.getFolder(), "Rigs")
+	return newSave
 end
 
--- The saved clip for `rig`, or nil when there is none (or it cannot be read).
-function Storage.loadClip(rig: Model): Model.Clip?
-	local save = findRigSave(rig)
-	local value = save and save:FindFirstChild("Clip")
-	if not (value and value:IsA("StringValue") and value.Value ~= "") then
+-- Writes all of the rig's animations: one StringValue (JSON) per animation inside
+-- <save>.Animations, named after the animation and matched by its id attribute.
+-- Animations no longer in `clips` are removed.
+function Storage.saveClips(rig: Model, clips: { Model.Clip })
+	local save = getOrCreateRigSave(rig)
+	local folder = getOrCreateFolder(save, "Animations")
+	local existing: { [string]: StringValue } = {}
+	for _, child in folder:GetChildren() do
+		local id = child:GetAttribute(ID_ATTRIBUTE)
+		if child:IsA("StringValue") and type(id) == "string" then
+			existing[id] = child
+		end
+	end
+	local kept: { [StringValue]: boolean } = {}
+	for index, clip in clips do
+		local id = clip.id or clip.name
+		local value = existing[id]
+		if not value then
+			local newValue = Instance.new("StringValue")
+			newValue:SetAttribute(ID_ATTRIBUTE, id)
+			newValue.Parent = folder
+			value = newValue
+		end
+		local stringValue = value :: StringValue
+		stringValue.Name = clip.name
+		stringValue:SetAttribute("Order", index)
+		local json = HttpService:JSONEncode(Serialize.encodeClip(clip))
+		if stringValue.Value ~= json then
+			stringValue.Value = json
+		end
+		kept[stringValue] = true
+	end
+	for _, value in existing do
+		if not kept[value] then
+			value:Destroy()
+		end
+	end
+	-- Older Animora versions kept a single "Clip" value; it now lives in Animations.
+	local legacy = save:FindFirstChild("Clip")
+	if legacy then
+		legacy:Destroy()
+	end
+end
+
+local function decodeValue(rig: Model, value: StringValue): Model.Clip?
+	if value.Value == "" then
 		return nil
 	end
 	local ok, data = pcall(HttpService.JSONDecode, HttpService, value.Value)
 	if not ok then
-		warn("[Animora] Could not read the saved clip for " .. rig.Name .. ": " .. tostring(data))
+		warn("[Animora] Could not read saved animation " .. value.Name .. " of " .. rig.Name .. ": " .. tostring(data))
 		return nil
 	end
 	return Serialize.decodeClip(data)
+end
+
+-- The rig's saved animations in list order (empty when there are none).
+function Storage.loadClips(rig: Model): { Model.Clip }
+	local clips: { Model.Clip } = {}
+	local save = findRigSave(rig)
+	if not save then
+		return clips
+	end
+	local folder = save:FindFirstChild("Animations")
+	if folder then
+		local values: { StringValue } = {}
+		for _, child in folder:GetChildren() do
+			if child:IsA("StringValue") then
+				table.insert(values, child)
+			end
+		end
+		table.sort(values, function(a, b)
+			return (tonumber(a:GetAttribute("Order")) or 0) < (tonumber(b:GetAttribute("Order")) or 0)
+		end)
+		for _, value in values do
+			local clip = decodeValue(rig, value)
+			if clip then
+				local id = value:GetAttribute(ID_ATTRIBUTE)
+				clip.id = if type(id) == "string" then id else clip.id
+				table.insert(clips, clip)
+			end
+		end
+	end
+	-- Single clip saved by an older Animora version.
+	local legacy = save:FindFirstChild("Clip")
+	if #clips == 0 and legacy and legacy:IsA("StringValue") then
+		local clip = decodeValue(rig, legacy)
+		if clip then
+			clip.name = "Animation"
+			table.insert(clips, clip)
+		end
+	end
+	return clips
 end
 
 -- Puts an exported KeyframeSequence where the Animation Editor finds it

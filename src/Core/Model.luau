@@ -31,6 +31,7 @@ export type Track = {
 }
 
 export type Clip = {
+	id: string?, -- stable id used to match the saved copy in the place
 	name: string,
 	length: number, -- seconds
 	fps: number,

@@ -1,8 +1,11 @@
 --!strict
--- Editor state for one Studio session: the active rig, its clip, the current time,
+-- Editor state for one Studio session: the active rig, its animations (clips) and the
+-- one being edited, the current time,
 -- the selected joint and keyframes, playback, clipboard and undo history. UI and
 -- gizmos read from here and call its methods; `changed` fires with what changed
--- ("rig", "clip", "time", "selection", "keys", "playing").
+-- ("rig", "animation", "clip", "time", "selection", "keys", "playing").
+
+local HttpService = game:GetService("HttpService")
 
 local RunService = game:GetService("RunService")
 
@@ -19,12 +22,13 @@ local IO = require(script.Parent.IO)
 local DEFAULT_FPS = 30
 local DEFAULT_LENGTH = 2 -- seconds
 
-export type Change = "rig" | "clip" | "time" | "selection" | "keys" | "playing"
+export type Change = "rig" | "animation" | "clip" | "time" | "selection" | "keys" | "playing"
 
 -- A keyframe is identified by its joint and time.
 export type KeyRef = { joint: string, time: number }
 
-type RigState = { clip: Model.Clip }
+-- A rig's animations and the one being edited.
+type RigState = { clips: { Model.Clip }, active: Model.Clip }
 
 -- Deep copy of every track, the clip settings and the key selection, used for undo.
 type ClipSettings = {
@@ -61,13 +65,15 @@ export type Session = typeof(setmetatable(
 		rig: Model?,
 		binder: RigBinder.RigBinder?,
 		jointOrder: { RigBinder.JointEntry },
+		-- The rig's animations, in list order; `clip` is the one being edited.
+		clips: { Model.Clip },
 		clip: Model.Clip?,
 		history: Commands.History,
 		-- Called after every recorded edit with its name (used to add a Studio undo waypoint
-		-- and to save the clip into the place).
+		-- and to save the rig's animations into the place).
 		onEdit: ((name: string) -> ())?,
-		-- Loads a rig's saved clip the first time the rig is opened in this session.
-		loadClip: ((rig: Model) -> Model.Clip?)?,
+		-- Loads a rig's saved animations the first time the rig is opened in this session.
+		loadClips: ((rig: Model) -> { Model.Clip }?)?,
 		time: number,
 		selectedJoint: string?,
 		selectedKeys: { KeyRef },
@@ -86,11 +92,12 @@ function Session.new(): Session
 		rig = nil,
 		binder = nil,
 		jointOrder = {},
+		clips = {},
 		clip = nil,
 		-- One history for all rigs: undoing an edit switches back to the rig it was made on.
 		history = Commands.History.new(),
 		onEdit = nil,
-		loadClip = nil,
+		loadClips = nil,
 		time = 0,
 		selectedJoint = nil,
 		selectedKeys = {},
@@ -104,8 +111,19 @@ function Session.new(): Session
 	}, Session)
 end
 
--- Switches the edited rig. The previous rig goes back to its rest pose; each rig
--- keeps its own clip for the rest of the Studio session.
+local function newId(): string
+	return HttpService:GenerateGUID(false)
+end
+
+local function newClip(name: string): Model.Clip
+	local clip = Model.newClip(name, DEFAULT_FPS)
+	clip.length = DEFAULT_LENGTH
+	clip.id = newId()
+	return clip
+end
+
+-- Switches the edited rig. The previous rig goes back to its rest pose; each rig keeps
+-- its animations for the rest of the Studio session.
 function Session.setRig(self: Session, rig: Model?)
 	if rig == self.rig then
 		return
@@ -124,23 +142,27 @@ function Session.setRig(self: Session, rig: Model?)
 		local binder = RigBinder.new(rig)
 		local state = self._rigStates[rig]
 		if not state then
-			local clip = self.loadClip and self.loadClip(rig)
-			if not clip then
-				clip = Model.newClip(rig.Name, DEFAULT_FPS)
-				clip.length = DEFAULT_LENGTH
+			local clips = (self.loadClips and self.loadClips(rig)) or {}
+			if #clips == 0 then
+				table.insert(clips, newClip("Animation"))
 			end
-			state = { clip = clip :: Model.Clip }
+			for _, clip in clips do
+				clip.id = clip.id or newId()
+			end
+			state = { clips = clips, active = clips[1] }
 			self._rigStates[rig] = state
 		end
 		self.binder = binder
 		self.jointOrder = binder:jointOrder()
-		self.clip = state.clip
+		self.clips = state.clips
+		self.clip = state.active
 		self._preview = Preview.new(binder, "C0")
-		self.time = math.clamp(self.time, 0, state.clip.length)
+		self.time = math.clamp(self.time, 0, state.active.length)
 		self:refreshPose()
 	else
 		self.binder = nil
 		self.jointOrder = {}
+		self.clips = {}
 		self.clip = nil
 	end
 	self.changed:Fire("rig")
@@ -221,7 +243,7 @@ function Session.commitJoint(self: Session, jointName: string, value: CFrame)
 		end
 	end
 
-	self:_execute("Set keyframe", {
+	self:_execute("Set keyframe", clip, {
 		apply = function()
 			local track = Model.getOrCreateTrack(clip, jointName)
 			local easingStyle = if previous then previous.easingStyle else "Linear"
@@ -252,17 +274,22 @@ function Session._afterEdit(self: Session)
 end
 
 -- Records an edit made on the current rig. Its apply/revert first switch back to that
--- rig, so undo works even after the user moved on to another rig.
-function Session._execute(self: Session, name: string, step: { apply: () -> (), revert: () -> () })
+-- rig (and to `clip`, the animation it changed), so undo works even after the user moved
+-- on to another rig or animation.
+function Session._execute(self: Session, name: string, clip: Model.Clip?, step: { apply: () -> (), revert: () -> () })
 	local rig = self.rig
 	local function onRig(action: () -> ())
 		return function()
 			if rig and self.rig ~= rig and rig.Parent then
 				self:setRig(rig)
 			end
-			if self.rig == rig then
-				action()
+			if self.rig ~= rig then
+				return
 			end
+			if clip and self.clip ~= clip and table.find(self.clips, clip) then
+				self:_activate(clip)
+			end
+			action()
 		end
 	end
 	self.history:execute({ name = name, apply = onRig(step.apply), revert = onRig(step.revert) })
@@ -444,7 +471,7 @@ function Session._edit(self: Session, name: string, mutate: (clip: Model.Clip) -
 		end
 	end
 	local after = self:_snapshot()
-	self:_execute(name, {
+	self:_execute(name, clip, {
 		apply = function()
 			self:_restore(after)
 		end,
@@ -796,6 +823,181 @@ function Session.buildExport(self: Session): KeyframeSequence?
 	local exportClip = table.clone(clip)
 	exportClip.length = self:playbackEnd()
 	return IO.exportKeyframeSequence(Bake.bakeClip(exportClip), binder.joints)
+end
+
+-- Animation list (per rig) --------------------------------------------------------------
+
+-- Makes `clip` the animation being edited (not an undo step).
+function Session._activate(self: Session, clip: Model.Clip)
+	if self.clip == clip then
+		return
+	end
+	self:pause()
+	self._override = nil
+	self.clip = clip
+	local state = self.rig and self._rigStates[self.rig]
+	if state then
+		state.active = clip
+	end
+	self.selectedKeys = {}
+	self.time = math.clamp(self.time, 0, clip.length)
+	self:refreshPose()
+	self.changed:Fire("animation")
+end
+
+function Session.selectAnimation(self: Session, clip: Model.Clip)
+	if table.find(self.clips, clip) then
+		self:_activate(clip)
+	end
+end
+
+-- `base`, or `base 2`, `base 3`... so names in one rig's list stay unique.
+function Session.uniqueName(self: Session, base: string, except: Model.Clip?): string
+	local function taken(name: string): boolean
+		for _, clip in self.clips do
+			if clip ~= except and clip.name == name then
+				return true
+			end
+		end
+		return false
+	end
+	local trimmed = string.gsub(base, "^%s*(.-)%s*$", "%1")
+	local name = if trimmed == "" then "Animation" else trimmed
+	if not taken(name) then
+		return name
+	end
+	local index = 2
+	while taken(name .. " " .. index) do
+		index += 1
+	end
+	return name .. " " .. index
+end
+
+-- Adds `clip` to the list at `index` (undoable) and makes it the active animation.
+function Session._insertAnimation(self: Session, stepName: string, clip: Model.Clip, index: number)
+	local clips = self.clips
+	local previous = self.clip
+	self:_execute(stepName, nil, {
+		apply = function()
+			table.insert(clips, math.min(index, #clips + 1), clip)
+			self:_activate(clip)
+			self.changed:Fire("clip")
+		end,
+		revert = function()
+			local position = table.find(clips, clip)
+			if position then
+				table.remove(clips, position)
+			end
+			if previous and table.find(clips, previous) then
+				self:_activate(previous)
+			elseif clips[1] then
+				self:_activate(clips[1])
+			end
+			self.changed:Fire("clip")
+		end,
+	})
+end
+
+-- Creates an empty animation (undoable) and switches to it.
+function Session.newAnimation(self: Session, name: string?): Model.Clip?
+	if not self.rig then
+		return nil
+	end
+	local clip = newClip(self:uniqueName(name or "Animation"))
+	self:_insertAnimation("New animation", clip, #self.clips + 1)
+	return clip
+end
+
+-- Copies a clip deeply (tracks, keyframes and settings) under a new id.
+local function copyClip(source: Model.Clip, name: string): Model.Clip
+	local clip = table.clone(source)
+	clip.id = newId()
+	clip.name = name
+	clip.tracks = {}
+	for trackName, track in source.tracks do
+		local keyframes = {}
+		for index, keyframe in track.keyframes do
+			keyframes[index] = table.clone(keyframe)
+		end
+		clip.tracks[trackName] = { jointName = trackName, keyframes = keyframes }
+	end
+	return clip
+end
+
+-- Copies the active animation (undoable) and switches to the copy.
+function Session.duplicateAnimation(self: Session): Model.Clip?
+	local source = self.clip
+	if not (self.rig and source) then
+		return nil
+	end
+	local clip = copyClip(source, self:uniqueName(source.name .. " copy"))
+	local index = (table.find(self.clips, source) or #self.clips) + 1
+	self:_insertAnimation("Duplicate animation", clip, index)
+	return clip
+end
+
+-- Renames the active animation (undoable). Returns the name actually used.
+function Session.renameAnimation(self: Session, name: string): string?
+	local clip = self.clip
+	if not clip then
+		return nil
+	end
+	local newName = self:uniqueName(name, clip)
+	local oldName = clip.name
+	if newName == oldName then
+		return newName
+	end
+	self:_execute("Rename animation", clip, {
+		apply = function()
+			clip.name = newName
+			self.changed:Fire("clip")
+		end,
+		revert = function()
+			clip.name = oldName
+			self.changed:Fire("clip")
+		end,
+	})
+	return newName
+end
+
+-- Deletes the active animation (undoable). A rig always keeps at least one animation,
+-- so deleting the last one leaves a fresh empty animation in its place.
+function Session.deleteAnimation(self: Session): string?
+	local clip = self.clip
+	local clips = self.clips
+	if not (self.rig and clip) then
+		return nil
+	end
+	local index = table.find(clips, clip) or 1
+	local replacement: Model.Clip? = nil
+	if #clips == 1 then
+		replacement = newClip("Animation")
+	end
+	self:_execute("Delete animation", nil, {
+		apply = function()
+			local position = table.find(clips, clip)
+			if position then
+				table.remove(clips, position)
+			end
+			if replacement then
+				table.insert(clips, replacement)
+			end
+			self:_activate(clips[math.clamp(index, 1, #clips)])
+			self.changed:Fire("clip")
+		end,
+		revert = function()
+			if replacement then
+				local position = table.find(clips, replacement)
+				if position then
+					table.remove(clips, position)
+				end
+			end
+			table.insert(clips, math.min(index, #clips + 1), clip)
+			self:_activate(clip)
+			self.changed:Fire("clip")
+		end,
+	})
+	return clip.name
 end
 
 function Session.destroy(self: Session)

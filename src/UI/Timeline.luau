@@ -575,7 +575,7 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 	table.insert(
 		connections,
 		session.changed:Connect(function(change: Session.Change)
-			if change == "rig" then
+			if change == "rig" or change == "animation" then
 				rowsDirty = true
 			end
 			dirty = true

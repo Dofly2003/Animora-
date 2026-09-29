@@ -63,6 +63,18 @@ return {
 	["easing.direction"] = "Direction:",
 	["easing.applied"] = "Easing {style} {direction} set on {count} keyframe(s).",
 
+	["animations.button"] = "Anim: {name}",
+	["animations.title"] = "Animations of {rig} ({count}) - click one to edit it",
+	["animations.new"] = "New",
+	["animations.duplicate"] = "Duplicate",
+	["animations.delete"] = "Delete",
+	["animations.rename"] = "Rename",
+	["animations.namePlaceholder"] = "Animation name (e.g. Walk)",
+	["animations.hint"] = "Each animation is saved in the place and exported under its own name. Ctrl+Z undoes list changes too.",
+	["animations.created"] = "Created {name}.",
+	["animations.deleted"] = "Deleted {name} (Ctrl+Z to undo).",
+	["animations.renamed"] = "Renamed to {name}.",
+
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",
