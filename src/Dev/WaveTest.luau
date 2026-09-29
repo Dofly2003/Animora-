@@ -22,14 +22,7 @@ local WAVE_KEYS: { { time: number, degrees: number } } = {
 
 -- Walks up from the selected instance to the closest rig model.
 function WaveTest.findRig(selected: Instance?): Model?
-	local current = selected
-	while current and current ~= workspace do
-		if current:IsA("Model") and RigBinder.isRig(current) then
-			return current
-		end
-		current = current.Parent
-	end
-	return nil
+	return RigBinder.findRig(selected)
 end
 
 -- Builds the looping wave clip, or returns nil + a reason key when the rig has no right arm.

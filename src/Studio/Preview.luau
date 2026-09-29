@@ -12,6 +12,10 @@ local RigBinder = require(script.Parent.RigBinder)
 
 export type Mode = "Transform" | "C0"
 
+-- The rig's rest C0 is also stored as an attribute on each Motor6D while a pose is
+-- shown, so a rig saved mid-preview (or after a crash) can still be restored.
+local REST_ATTRIBUTE = "AnimoraRestC0"
+
 local Preview = {}
 Preview.__index = Preview
 
@@ -50,12 +54,28 @@ function Preview._apply(self: Preview, pose: { [string]: CFrame })
 	for jointName, transform in pose do
 		local joint = self.binder.joints[jointName]
 		if joint then
-			if not self._originalC0[joint] then
-				self._originalC0[joint] = joint.C0
-			end
-			joint.C0 = self._originalC0[joint] * transform
+			joint.C0 = self:_restC0(joint) * transform
 		end
 	end
+end
+
+function Preview._restC0(self: Preview, joint: Motor6D): CFrame
+	local known = self._originalC0[joint]
+	if known then
+		return known
+	end
+	local stored = joint:GetAttribute(REST_ATTRIBUTE)
+	local rest = if typeof(stored) == "CFrame" then stored else joint.C0
+	if stored == nil then
+		joint:SetAttribute(REST_ATTRIBUTE, rest)
+	end
+	self._originalC0[joint] = rest
+	return rest
+end
+
+-- Shows a single static pose (used while editing). Call restore() to undo it.
+function Preview.showPose(self: Preview, pose: { [string]: CFrame })
+	self:_apply(pose)
 end
 
 -- Starts playback; `onTick(elapsedSeconds)` runs after each applied frame.
@@ -93,10 +113,16 @@ function Preview.stop(self: Preview)
 		for joint, originalC0 in self._originalC0 do
 			if joint.Parent then
 				joint.C0 = originalC0
+				joint:SetAttribute(REST_ATTRIBUTE, nil)
 			end
 		end
 		table.clear(self._originalC0)
 	end
+end
+
+-- Same as stop(): stops playback (if any) and puts the rig back in its rest pose.
+function Preview.restore(self: Preview)
+	self:stop()
 end
 
 return Preview

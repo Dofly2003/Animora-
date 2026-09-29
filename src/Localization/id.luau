@@ -15,6 +15,17 @@ return {
 	["timeline.loop"] = "Ulang",
 	["timeline.frame"] = "Frame {frame}",
 
+	["editor.noRig"] = "Pilih rig (klik salah satu bagiannya) di viewport untuk mulai menganimasikan.",
+	["editor.rulerHint"] = "seret = scrub, roda = zoom, Shift+roda = geser",
+	["editor.status.noRig"] = "Belum ada rig dipilih",
+	["editor.status.rig"] = "{rig} - {joint}. Klik bagian tubuh, lalu seret cincin putar untuk membuat keyframe.",
+	["editor.status.noJoint"] = "belum ada sendi dipilih",
+	["editor.time"] = "{time} dtk - frame {frame}/{frames}",
+	["editor.play"] = "Putar",
+	["editor.pause"] = "Jeda",
+	["editor.undo"] = "Undo",
+	["editor.redo"] = "Redo",
+
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",

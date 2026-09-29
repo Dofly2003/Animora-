@@ -8,6 +8,8 @@ RigBinder.__index = RigBinder
 
 export type RigBinder = typeof(setmetatable({} :: { rig: Model, joints: { [string]: Motor6D } }, RigBinder))
 
+export type JointEntry = { name: string, depth: number }
+
 -- Collects every Motor6D in the rig, keyed by the name of its Part1.
 function RigBinder.new(rig: Model): RigBinder
 	local joints: { [string]: Motor6D } = {}
@@ -21,6 +23,73 @@ end
 
 function RigBinder.isRig(instance: Instance): boolean
 	return instance:IsA("Model") and instance:FindFirstChildWhichIsA("Motor6D", true) ~= nil
+end
+
+-- Walks up from any instance (e.g. a selected part) to the closest rig model.
+function RigBinder.findRig(instance: Instance?): Model?
+	local current = instance
+	while current and current ~= workspace and current ~= game do
+		if current:IsA("Model") and RigBinder.isRig(current) then
+			return current
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
+-- The root of the joint tree: a part that drives joints but is not driven by any
+-- (HumanoidRootPart on R6/R15, whatever the root is on custom rigs).
+function RigBinder.findRootPart(joints: { [string]: Motor6D }): BasePart?
+	local driven: { [BasePart]: boolean } = {}
+	for _, joint in joints do
+		if joint.Part1 then
+			driven[joint.Part1] = true
+		end
+	end
+	for _, joint in joints do
+		local part0 = joint.Part0
+		if part0 and not driven[part0] then
+			return part0
+		end
+	end
+	return nil
+end
+
+-- Joints in tree order (parent before children, children sorted by name) with their
+-- depth, for showing the rig hierarchy in the timeline.
+function RigBinder.jointOrder(self: RigBinder): { JointEntry }
+	local order: { JointEntry } = {}
+	local childrenOf: { [BasePart]: { Motor6D } } = {}
+	for _, joint in self.joints do
+		local part0 = joint.Part0
+		if part0 then
+			childrenOf[part0] = childrenOf[part0] or {}
+			table.insert(childrenOf[part0], joint)
+		end
+	end
+
+	local visited: { [BasePart]: boolean } = {}
+	local function visit(part: BasePart, depth: number)
+		if visited[part] then
+			return
+		end
+		visited[part] = true
+		local children = childrenOf[part] or {}
+		table.sort(children, function(a, b)
+			return (a.Part1 :: BasePart).Name < (b.Part1 :: BasePart).Name
+		end)
+		for _, joint in children do
+			local part1 = joint.Part1 :: BasePart
+			table.insert(order, { name = part1.Name, depth = depth })
+			visit(part1, depth + 1)
+		end
+	end
+
+	local root = RigBinder.findRootPart(self.joints)
+	if root then
+		visit(root, 0)
+	end
+	return order
 end
 
 function RigBinder.applyPose(self: RigBinder, pose: { [string]: CFrame })

@@ -15,6 +15,17 @@ return {
 	["timeline.loop"] = "Loop",
 	["timeline.frame"] = "Frame {frame}",
 
+	["editor.noRig"] = "Select a rig (click any part of it) in the viewport to start animating.",
+	["editor.rulerHint"] = "drag = scrub, wheel = zoom, Shift+wheel = pan",
+	["editor.status.noRig"] = "No rig selected",
+	["editor.status.rig"] = "{rig} - {joint}. Click a body part, then drag the rotate rings to set a keyframe.",
+	["editor.status.noJoint"] = "no joint selected",
+	["editor.time"] = "{time} s - frame {frame}/{frames}",
+	["editor.play"] = "Play",
+	["editor.pause"] = "Pause",
+	["editor.undo"] = "Undo",
+	["editor.redo"] = "Redo",
+
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",

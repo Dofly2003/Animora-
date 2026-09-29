@@ -4,6 +4,7 @@
 -- Spike A (week 1) validates export + publish; see docs/spike-results.md.
 
 local Model = require(script.Parent.Parent.Core.Model)
+local RigBinder = require(script.Parent.RigBinder)
 
 local IO = {}
 
@@ -65,28 +66,10 @@ local function buildPoseTree(
 	return emptyRoot
 end
 
--- The root of the joint tree: a part that drives joints but is not driven by any
--- (HumanoidRootPart on R6/R15, whatever the root is on custom rigs).
-local function findRootPart(joints: { [string]: Motor6D }): BasePart?
-	local driven: { [BasePart]: boolean } = {}
-	for _, joint in joints do
-		if joint.Part1 then
-			driven[joint.Part1] = true
-		end
-	end
-	for _, joint in joints do
-		local part0 = joint.Part0
-		if part0 and not driven[part0] then
-			return part0
-		end
-	end
-	return nil
-end
-
 -- Exports a clip as a KeyframeSequence (not parented anywhere). Pass a baked clip
 -- (Core/Bake) so every easing style survives export; see Bake.luau for why.
 function IO.exportKeyframeSequence(clip: Model.Clip, joints: { [string]: Motor6D }): KeyframeSequence
-	local rootPart = findRootPart(joints)
+	local rootPart = RigBinder.findRootPart(joints)
 	assert(rootPart, "Rig has no Motor6D joint tree")
 
 	local sequence = Instance.new("KeyframeSequence")
