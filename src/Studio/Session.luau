@@ -253,15 +253,40 @@ function Session.redo(self: Session): boolean
 	return self.history:redo() ~= nil
 end
 
+-- Where playback loops: the last keyframe on any track, or the clip length when the
+-- clip has no keyframe after time 0.
+function Session.playbackEnd(self: Session): number
+	local clip = self.clip
+	if not clip then
+		return 0
+	end
+	local last = 0
+	for _, track in clip.tracks do
+		local keyframes = track.keyframes
+		if #keyframes > 0 then
+			last = math.max(last, keyframes[#keyframes].time)
+		end
+	end
+	return if last > 0 then last else clip.length
+end
+
+-- Plays from the playhead up to the last keyframe, then loops back to the start.
 function Session.play(self: Session)
 	local clip = self.clip
 	if self.playing or not clip then
 		return
 	end
+	local loopEnd = self:playbackEnd()
+	if loopEnd <= 0 then
+		return
+	end
 	self.playing = true
 	self._override = nil
+	if self.time >= loopEnd then
+		self.time = 0
+	end
 	self._playConnection = RunService.Heartbeat:Connect(function(deltaTime)
-		self.time = (self.time + deltaTime) % clip.length
+		self.time = (self.time + deltaTime) % loopEnd
 		self:refreshPose()
 		self.changed:Fire("time")
 	end)

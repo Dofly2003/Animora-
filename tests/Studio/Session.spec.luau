@@ -251,6 +251,21 @@ describe("Session", function()
 		session:destroy()
 	end)
 
+	it("loops playback at the last keyframe", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(session:playbackEnd()).toBe(2) -- no keyframes yet: whole clip
+
+		session:setTime(0)
+		session:commitJoint("Arm", CFrame.identity)
+		session:setTime(0.8)
+		session:commitJoint("Head", CFrame.Angles(0.2, 0, 0))
+		expect(session:playbackEnd()).toBeCloseTo(0.8, 4)
+		session:destroy()
+	end)
+
 	it("cycles the frame rate 30 -> 60 -> 24", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)
