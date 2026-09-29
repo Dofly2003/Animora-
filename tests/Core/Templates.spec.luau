@@ -33,7 +33,7 @@ describe("Templates", function()
 		for _, template in Templates.list() do
 			table.insert(ids, template.id)
 		end
-		expect(table.concat(ids, ",")).toBe("Idle,Walk,Run,Jump,Wave,ScaredIdle")
+		expect(table.concat(ids, ",")).toBe("Idle,Walk,Run,Jump,Wave,ScaredIdle,ScaredRun")
 	end)
 
 	it("builds Walk for R15 with legs swinging in opposite directions", function()
@@ -77,6 +77,23 @@ describe("Templates", function()
 		end
 		expect(sawRight).toBe(true)
 		expect(sawLeft).toBe(true)
+	end)
+
+	it("builds Scared Run with alternating strides and a look back", function()
+		local clip = build("ScaredRun", R15)
+		expect(clip.looped).toBe(true)
+		expect(clip.length).toBeCloseTo(1.2, 4)
+
+		local hip = clip.tracks.RightUpperLeg.keyframes
+		local first, last = hip[1].value, hip[#hip].value
+		expect(first:FuzzyEq(last, 1e-4)).toBe(true) -- seamless loop
+
+		local lookedBack = false
+		for _, keyframe in clip.tracks.Head.keyframes do
+			local facing = keyframe.value:VectorToWorldSpace(Vector3.new(0, 0, -1))
+			lookedBack = lookedBack or facing.X < -0.9
+		end
+		expect(lookedBack).toBe(true)
 	end)
 
 	it("builds for R6 without knees and elbows", function()

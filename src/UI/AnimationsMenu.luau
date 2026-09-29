@@ -18,7 +18,7 @@ export type Handle = {
 }
 
 local ROW = 26
-local HEIGHT = 220
+local HEIGHT = 250
 local LIST_WIDTH = 260
 
 function AnimationsMenu.mount(
@@ -141,11 +141,23 @@ function AnimationsMenu.mount(
 	templateLabel.TextColor3 = Theme.color(Enum.StudioStyleGuideColor.MainText)
 	templateLabel.ZIndex = 22
 	templateLabel.Parent = actions
+	-- Template buttons wrap onto a second row when the panel is narrow.
+	local templateGrid = Instance.new("Frame")
+	templateGrid.BackgroundTransparency = 1
+	templateGrid.Position = UDim2.fromOffset(90, (ROW + 6) * 2)
+	templateGrid.Size = UDim2.new(1, -90, 0, ROW * 2 + 4)
+	templateGrid.ZIndex = 21
+	templateGrid.Parent = actions
+	local templateLayout = Instance.new("UIGridLayout")
+	templateLayout.CellSize = UDim2.fromOffset(88, ROW - 2)
+	templateLayout.CellPadding = UDim2.fromOffset(4, 4)
+	templateLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	templateLayout.Parent = templateGrid
+
 	local templateButtons: { TextButton } = {}
 	for index, template in Templates.list() do
-		local templateButton = newButton(actions, {
-			Position = UDim2.fromOffset(90 + (index - 1) * 64, (ROW + 6) * 2),
-			Size = UDim2.fromOffset(60, ROW - 2),
+		local templateButton = newButton(templateGrid, {
+			LayoutOrder = index,
 			Text = template.name,
 		})
 		templateButton:SetAttribute("TemplateId", template.id)
@@ -154,7 +166,7 @@ function AnimationsMenu.mount(
 
 	local hint = Instance.new("TextLabel")
 	hint.BackgroundTransparency = 1
-	hint.Position = UDim2.fromOffset(0, (ROW + 6) * 3)
+	hint.Position = UDim2.fromOffset(0, (ROW + 6) * 2 + ROW * 2 + 8)
 	hint.Size = UDim2.new(1, 0, 0, ROW * 2)
 	hint.FontFace = Theme.FONT
 	hint.TextSize = Theme.TEXT_SIZE - 1

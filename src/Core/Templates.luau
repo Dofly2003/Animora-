@@ -1,5 +1,6 @@
 --!strict
--- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle) authored for Animora. They are simple,
+-- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Run) authored for
+-- Animora. They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
 -- Poses are written per *logical* joint (hipR, kneeL, ...) in the parent part's space,
@@ -180,6 +181,66 @@ local function scaredIdle(): Template
 		name = "Scared Idle",
 		looped = true,
 		priority = Enum.AnimationPriority.Idle,
+		keys = keys,
+	}
+end
+
+-- Scared Run: panicked fleeing that pairs with Scared Idle. Strong forward lean, head
+-- low, fast strides with high knees, arms pumping wide with the elbows out, and one
+-- glance back over the shoulder per loop (two stride cycles, 1.2 s).
+local SCARED_RUN_STRIDE = 0.3 -- seconds per step
+
+local function scaredRunStride(side: number): { [string]: JointPose }
+	local pose = stride(side, 50, 80, 60, 95, -0.08)
+	pose.root = { y = -0.08, rx = -6, ry = 5 * side }
+	pose.waist = { rx = -20, ry = -8 * side }
+	pose.shoulderR = { rx = -60 * side, rz = 18 }
+	pose.shoulderL = { rx = 60 * side, rz = 18 }
+	return pose
+end
+
+local function scaredRunPassing(side: number): { [string]: JointPose }
+	local pose = passing(side, 100, 95, 0.22, -20)
+	pose.root = { y = 0.22, rx = -6 }
+	pose.shoulderR = { rx = 0, rz = 22 }
+	pose.shoulderL = { rx = 0, rz = 22 }
+	return pose
+end
+
+local function scaredRun(): Template
+	local keys: { TemplateKey } = {}
+	for step = 0, 8 do
+		local time = step * SCARED_RUN_STRIDE / 2
+		-- Even steps are contact poses (right, left, right...), odd steps passing poses.
+		local side = if (step // 2) % 2 == 0 then 1 else -1
+		local pose = if step % 2 == 0 then scaredRunStride(side) else scaredRunPassing(side)
+		table.insert(keys, { time = time, easing = "Sine", direction = "InOut", pose = pose })
+	end
+
+	-- Head: low and forward, then a quick look back over the left shoulder and a snap
+	-- back to the front. Positive ry turns the face to the character's left.
+	local looks = {
+		{ time = 0.0, rx = -10, ry = 0, easing = "Sine" :: Model.EasingStyle },
+		{ time = 0.5, rx = -10, ry = 0, easing = "Quad" :: Model.EasingStyle },
+		{ time = 0.68, rx = 4, ry = 80, easing = "Sine" :: Model.EasingStyle },
+		{ time = 0.85, rx = 4, ry = 75, easing = "Quad" :: Model.EasingStyle },
+		{ time = 1.0, rx = -10, ry = 0, easing = "Sine" :: Model.EasingStyle },
+		{ time = 1.2, rx = -10, ry = 0, easing = "Sine" :: Model.EasingStyle },
+	}
+	for _, look in looks do
+		table.insert(keys, {
+			time = look.time,
+			easing = look.easing,
+			direction = "Out",
+			pose = { neck = { rx = look.rx, ry = look.ry } },
+		})
+	end
+
+	return {
+		id = "ScaredRun",
+		name = "Scared Run",
+		looped = true,
+		priority = Enum.AnimationPriority.Movement,
 		keys = keys,
 	}
 end
@@ -486,6 +547,7 @@ local LIST: { Template } = {
 		},
 	},
 	scaredIdle(),
+	scaredRun(),
 }
 
 -- R6 has no separate waist: lean its upper body a little through the root instead.
