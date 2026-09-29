@@ -57,6 +57,38 @@ describe("RigBinder.jointOrder", function()
 	end)
 end)
 
+describe("RigBinder.findRig", function()
+	it("finds the rig from one of its parts", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		expect(RigBinder.findRig(rig:FindFirstChild("Arm"))).toBe(rig)
+	end)
+
+	it("does not treat a group model holding rigs as a rig", function()
+		local group = Instance.new("Model")
+		group.Name = "Rigs"
+		local rigA = makeRig()
+		local rigB = makeRig()
+		rigA.Parent = group
+		rigB.Parent = group
+		group.Parent = workspace
+		table.insert(rigs, group :: any)
+
+		expect(RigBinder.isRig(group)).toBe(false)
+		expect(RigBinder.findRig(group)).toBeNil()
+		expect(RigBinder.findRig(rigB:FindFirstChild("Head"))).toBe(rigB)
+	end)
+
+	it("picks the single rig inside a selected group model", function()
+		local group = Instance.new("Model")
+		local rig = makeRig()
+		rig.Parent = group
+		group.Parent = workspace
+		table.insert(rigs, group :: any)
+		expect(RigBinder.findRig(group)).toBe(rig)
+	end)
+end)
+
 describe("Session", function()
 	it("auto-keys a joint and poses the rig through C0", function()
 		local rig, shoulder = makeRig()

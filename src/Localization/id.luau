@@ -19,6 +19,7 @@ return {
 	["editor.rulerHint"] = "seret = scrub, roda = zoom, Shift+roda = geser",
 	["editor.status.noRig"] = "Belum ada rig dipilih",
 	["editor.status.rig"] = "{rig} - {joint}. Klik bagian tubuh, lalu seret cincin putar untuk membuat keyframe.",
+	["editor.status.notRig"] = "{name} tidak punya joint Motor6D di antara part-nya sendiri, jadi belum bisa dianimasikan (rig skinned/bone belum didukung).",
 	["editor.status.noJoint"] = "belum ada sendi dipilih",
 	["editor.time"] = "{time} dtk - frame {frame}/{frames}",
 	["editor.play"] = "Putar",

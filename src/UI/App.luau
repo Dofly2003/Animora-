@@ -13,6 +13,7 @@ local Settings = require(script.Parent.Parent.Studio.Settings)
 local Session = require(script.Parent.Parent.Studio.Session)
 local Gizmo = require(script.Parent.Parent.Studio.Gizmo)
 local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
+local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 
@@ -24,7 +25,10 @@ local TOOLBAR_HEIGHT = ROW_HEIGHT * 2
 
 local App = {}
 
-export type AppHandle = { destroy: (self: AppHandle) -> () }
+export type AppHandle = {
+	session: Session.Session,
+	destroy: (self: AppHandle) -> (),
+}
 
 export type AppActions = {
 	openTimelineTest: () -> (),
@@ -33,6 +37,7 @@ export type AppActions = {
 function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions: AppActions): AppHandle
 	local scope = Fusion.scoped(Fusion)
 	local session = Session.new()
+	session.onEdit = StudioUndo.record
 	local gizmo = Gizmo.new(session)
 
 	local language = scope:Value(Localization.getLanguage())
@@ -40,6 +45,8 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local devMode = scope:Value(false)
 	-- Bumped on every session change so toolbar texts recompute.
 	local sessionTick = scope:Value(0)
+	-- Short message shown in the status bar (e.g. "this model has no Motor6D joints").
+	local notice = scope:Value(nil :: { key: string, args: { [string]: any }? }?)
 
 	local cleanups: { () -> () } = {}
 	local function track(connection: any)
@@ -74,8 +81,14 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		local rig = RigBinder.findRig(selected)
 		if not rig then
+			-- Explain why a selected model is ignored instead of silently doing nothing.
+			local model = if selected:IsA("Model") then selected else selected:FindFirstAncestorWhichIsA("Model")
+			if model and model ~= workspace then
+				notice:set({ key = "editor.status.notRig", args = { name = model.Name } })
+			end
 			return
 		end
+		notice:set(nil)
 		session:setRig(rig)
 		if selected:IsA("BasePart") and session.binder then
 			local joint = session.binder.joints[selected.Name]
@@ -86,11 +99,18 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	end
 	track(Selection.SelectionChanged:Connect(onSelectionChanged))
 
-	-- Studio undo/redo can rewrite the C0 values Animora uses for preview; re-apply the pose.
-	track(ChangeHistoryService.OnUndo:Connect(function()
+	-- Studio's Ctrl+Z / Ctrl+Y: when the waypoint is an Animora edit, undo/redo it in the
+	-- session too. Either way Studio may have rewritten the preview C0s, so re-apply the pose.
+	track(ChangeHistoryService.OnUndo:Connect(function(waypoint: string)
+		if StudioUndo.isAnimoraWaypoint(waypoint) then
+			session:undo()
+		end
 		session:refreshPose()
 	end))
-	track(ChangeHistoryService.OnRedo:Connect(function()
+	track(ChangeHistoryService.OnRedo:Connect(function(waypoint: string)
+		if StudioUndo.isAnimoraWaypoint(waypoint) then
+			session:redo()
+		end
 		session:refreshPose()
 	end))
 
@@ -163,6 +183,10 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local statusText = scope:Computed(function(use)
 		use(language)
 		use(sessionTick)
+		local message = use(notice)
+		if message then
+			return Localization.t(message.key, message.args)
+		end
 		local rig = session.rig
 		if not rig then
 			return Localization.t("editor.status.noRig")
@@ -292,7 +316,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							width = 60,
 							text = text("editor.undo"),
 							onClick = function()
-								session:undo()
+								StudioUndo.undo()
 							end,
 						}),
 						button({
@@ -300,7 +324,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							width = 60,
 							text = text("editor.redo"),
 							onClick = function()
-								session:redo()
+								StudioUndo.redo()
 							end,
 						}),
 						scope:New("TextLabel")({
@@ -430,7 +454,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local timeline = Timeline.mount(timelineHost, session)
 	onSelectionChanged()
 
-	local handle = {}
+	local handle = { session = session }
 	function handle.destroy(_self: AppHandle)
 		for _, cleanup in cleanups do
 			cleanup()

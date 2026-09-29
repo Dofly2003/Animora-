@@ -5,6 +5,7 @@ local Localization = require(script.Localization)
 local Settings = require(script.Studio.Settings)
 local App = require(script.UI.App)
 local TimelineTest = require(script.UI.TimelineTest)
+local Shortcuts = require(script.Studio.Shortcuts)
 
 local pluginSettings = Settings.new(plugin)
 Localization.setLanguage(pluginSettings:get("language"))
@@ -45,6 +46,10 @@ local function openTimelineTest()
 end
 
 local app = App.mount(widget, pluginSettings, { openTimelineTest = openTimelineTest })
+
+Shortcuts.register(plugin, widget, function()
+	return app.session
+end)
 
 toggleButton.Click:Connect(function()
 	widget.Enabled = not widget.Enabled

@@ -19,6 +19,7 @@ return {
 	["editor.rulerHint"] = "drag = scrub, wheel = zoom, Shift+wheel = pan",
 	["editor.status.noRig"] = "No rig selected",
 	["editor.status.rig"] = "{rig} - {joint}. Click a body part, then drag the rotate rings to set a keyframe.",
+	["editor.status.notRig"] = "{name} has no Motor6D joints between its own parts, so it cannot be animated yet (skinned/bone rigs are not supported).",
 	["editor.status.noJoint"] = "no joint selected",
 	["editor.time"] = "{time} s - frame {frame}/{frames}",
 	["editor.play"] = "Play",

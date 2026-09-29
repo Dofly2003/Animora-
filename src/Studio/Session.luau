@@ -22,7 +22,7 @@ export type Change = "rig" | "clip" | "time" | "selection" | "keys" | "playing"
 -- A keyframe is identified by its joint and time.
 export type KeyRef = { joint: string, time: number }
 
-type RigState = { clip: Model.Clip, history: Commands.History }
+type RigState = { clip: Model.Clip }
 
 -- Deep copy of every track plus the key selection, used for undo of multi-key edits.
 type Snapshot = { tracks: { [string]: { Model.Keyframe } }, selection: { KeyRef } }
@@ -43,7 +43,9 @@ export type Session = typeof(setmetatable(
 		binder: RigBinder.RigBinder?,
 		jointOrder: { RigBinder.JointEntry },
 		clip: Model.Clip?,
-		history: Commands.History?,
+		history: Commands.History,
+		-- Called after every recorded edit with its name (used to add a Studio undo waypoint).
+		onEdit: ((name: string) -> ())?,
 		time: number,
 		selectedJoint: string?,
 		selectedKeys: { KeyRef },
@@ -63,7 +65,9 @@ function Session.new(): Session
 		binder = nil,
 		jointOrder = {},
 		clip = nil,
-		history = nil,
+		-- One history for all rigs: undoing an edit switches back to the rig it was made on.
+		history = Commands.History.new(),
+		onEdit = nil,
 		time = 0,
 		selectedJoint = nil,
 		selectedKeys = {},
@@ -78,7 +82,7 @@ function Session.new(): Session
 end
 
 -- Switches the edited rig. The previous rig goes back to its rest pose; each rig
--- keeps its own clip and undo history for the rest of the Studio session.
+-- keeps its own clip for the rest of the Studio session.
 function Session.setRig(self: Session, rig: Model?)
 	if rig == self.rig then
 		return
@@ -99,13 +103,12 @@ function Session.setRig(self: Session, rig: Model?)
 		if not state then
 			local clip = Model.newClip(rig.Name, DEFAULT_FPS)
 			clip.length = DEFAULT_LENGTH
-			state = { clip = clip, history = Commands.History.new() }
+			state = { clip = clip }
 			self._rigStates[rig] = state
 		end
 		self.binder = binder
 		self.jointOrder = binder:jointOrder()
 		self.clip = state.clip
-		self.history = state.history
 		self._preview = Preview.new(binder, "C0")
 		self.time = math.clamp(self.time, 0, state.clip.length)
 		self:refreshPose()
@@ -113,7 +116,6 @@ function Session.setRig(self: Session, rig: Model?)
 		self.binder = nil
 		self.jointOrder = {}
 		self.clip = nil
-		self.history = nil
 	end
 	self.changed:Fire("rig")
 end
@@ -177,8 +179,7 @@ end
 function Session.commitJoint(self: Session, jointName: string, value: CFrame)
 	self._override = nil
 	local clip = self.clip
-	local history = self.history
-	if not (clip and history) then
+	if not clip then
 		return
 	end
 
@@ -194,8 +195,7 @@ function Session.commitJoint(self: Session, jointName: string, value: CFrame)
 		end
 	end
 
-	history:execute({
-		name = "Set keyframe",
+	self:_execute("Set keyframe", {
 		apply = function()
 			local track = Model.getOrCreateTrack(clip, jointName)
 			local easingStyle = if previous then previous.easingStyle else "Linear"
@@ -225,12 +225,32 @@ function Session._afterEdit(self: Session)
 	self.changed:Fire("clip")
 end
 
+-- Records an edit made on the current rig. Its apply/revert first switch back to that
+-- rig, so undo works even after the user moved on to another rig.
+function Session._execute(self: Session, name: string, step: { apply: () -> (), revert: () -> () })
+	local rig = self.rig
+	local function onRig(action: () -> ())
+		return function()
+			if rig and self.rig ~= rig and rig.Parent then
+				self:setRig(rig)
+			end
+			if self.rig == rig then
+				action()
+			end
+		end
+	end
+	self.history:execute({ name = name, apply = onRig(step.apply), revert = onRig(step.revert) })
+	if self.onEdit then
+		self.onEdit(name)
+	end
+end
+
 function Session.undo(self: Session): boolean
-	return self.history ~= nil and self.history:undo() ~= nil
+	return self.history:undo() ~= nil
 end
 
 function Session.redo(self: Session): boolean
-	return self.history ~= nil and self.history:redo() ~= nil
+	return self.history:redo() ~= nil
 end
 
 function Session.play(self: Session)
@@ -347,8 +367,7 @@ end
 -- Runs `mutate` on the clip and records it as one undoable step.
 function Session._edit(self: Session, name: string, mutate: (clip: Model.Clip) -> ())
 	local clip = self.clip
-	local history = self.history
-	if not (clip and history) then
+	if not clip then
 		return
 	end
 	self:pause()
@@ -360,8 +379,7 @@ function Session._edit(self: Session, name: string, mutate: (clip: Model.Clip) -
 		end
 	end
 	local after = self:_snapshot()
-	history:execute({
-		name = name,
+	self:_execute(name, {
 		apply = function()
 			self:_restore(after)
 		end,

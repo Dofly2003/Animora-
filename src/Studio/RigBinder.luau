@@ -21,18 +21,46 @@ function RigBinder.new(rig: Model): RigBinder
 	return setmetatable({ rig = rig, joints = joints }, RigBinder)
 end
 
+-- A rig is a model whose own parts are connected by Motor6Ds. A folder-like model
+-- that only *contains* rigs (its Motor6Ds belong to child models) is not a rig.
 function RigBinder.isRig(instance: Instance): boolean
-	return instance:IsA("Model") and instance:FindFirstChildWhichIsA("Motor6D", true) ~= nil
+	if not instance:IsA("Model") then
+		return false
+	end
+	for _, descendant in instance:GetDescendants() do
+		if descendant:IsA("Motor6D") and descendant.Part1 and descendant.Part1.Parent == instance then
+			return true
+		end
+	end
+	return false
 end
 
--- Walks up from any instance (e.g. a selected part) to the closest rig model.
+-- Rigs directly inside a container (used when Studio selects a whole group model).
+local function childRigs(container: Instance): { Model }
+	local rigs = {}
+	for _, child in container:GetChildren() do
+		if RigBinder.isRig(child) then
+			table.insert(rigs, child :: Model)
+		end
+	end
+	return rigs
+end
+
+-- Finds the rig for a selected instance: the closest rig model above it, or, when a
+-- group model holding exactly one rig is selected, that rig.
 function RigBinder.findRig(instance: Instance?): Model?
 	local current = instance
 	while current and current ~= workspace and current ~= game do
-		if current:IsA("Model") and RigBinder.isRig(current) then
-			return current
+		if RigBinder.isRig(current) then
+			return current :: Model
 		end
 		current = current.Parent
+	end
+	if instance and instance:IsA("Model") then
+		local rigs = childRigs(instance)
+		if #rigs == 1 then
+			return rigs[1]
+		end
 	end
 	return nil
 end

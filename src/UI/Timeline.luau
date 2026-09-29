@@ -552,37 +552,6 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 		table.insert(connections, frame.InputEnded:Connect(finishPointer))
 	end
 
-	-- Keyboard shortcuts while the mouse is over the timeline.
-	table.insert(
-		connections,
-		root.InputBegan:Connect(function(input)
-			if input.UserInputType ~= Enum.UserInputType.Keyboard then
-				return
-			end
-			local ctrl = input:IsModifierKeyDown(Enum.ModifierKey.Ctrl)
-			local shift = input:IsModifierKeyDown(Enum.ModifierKey.Shift)
-			local key = input.KeyCode
-			if key == Enum.KeyCode.Delete or key == Enum.KeyCode.Backspace then
-				session:deleteSelectedKeys()
-			elseif ctrl and key == Enum.KeyCode.C then
-				session:copy()
-			elseif ctrl and key == Enum.KeyCode.V then
-				session:paste()
-			elseif key == Enum.KeyCode.Right then
-				if shift then
-					session:jumpToKey(1)
-				else
-					session:stepFrame(1)
-				end
-			elseif key == Enum.KeyCode.Left then
-				if shift then
-					session:jumpToKey(-1)
-				else
-					session:stepFrame(-1)
-				end
-			end
-		end)
-	)
 	table.insert(
 		connections,
 		body:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
