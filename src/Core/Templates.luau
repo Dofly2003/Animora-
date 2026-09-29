@@ -1,6 +1,6 @@
 --!strict
--- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Run) authored for
--- Animora. They are simple,
+-- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Walk, Scared Run)
+-- authored for Animora. They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
 -- Poses are written per *logical* joint (hipR, kneeL, ...) in the parent part's space,
@@ -239,6 +239,79 @@ local function scaredRun(): Template
 	return {
 		id = "ScaredRun",
 		name = "Scared Run",
+		looped = true,
+		priority = Enum.AnimationPriority.Movement,
+		keys = keys,
+	}
+end
+
+-- Scared Walk: a slow, cautious creep between Scared Idle and Scared Run. Half crouch,
+-- hunched back, hands held at the chest with only a small swing, careful steps and a
+-- slow head scan right and left (two stride cycles, 2.4 s).
+local SCARED_WALK_STEP = 0.6 -- seconds per step
+
+-- Contact pose: `side` 1 = right foot forward.
+local function scaredWalkStride(side: number): { [string]: JointPose }
+	return {
+		root = { y = -0.22, ry = 3 * side },
+		waist = { rx = -14, ry = -4 * side },
+		hipR = { rx = 10 + 22 * side },
+		hipL = { rx = 10 - 22 * side },
+		kneeR = { rx = if side > 0 then -20 else -35 },
+		kneeL = { rx = if side > 0 then -35 else -20 },
+		shoulderR = { rx = 28 - 6 * side, rz = -10 },
+		shoulderL = { rx = 28 + 6 * side, rz = -10 },
+		elbowR = { rx = 75 },
+		elbowL = { rx = 75 },
+	}
+end
+
+-- Passing pose: `side` is the leg carrying the weight; the other leg lifts past it.
+local function scaredWalkPassing(side: number): { [string]: JointPose }
+	return {
+		root = { y = -0.12 },
+		waist = { rx = -14 },
+		hipR = { rx = if side > 0 then 5 else 32 },
+		hipL = { rx = if side > 0 then 32 else 5 },
+		kneeR = { rx = if side > 0 then -25 else -60 },
+		kneeL = { rx = if side > 0 then -60 else -25 },
+		shoulderR = { rx = 28, rz = -10 },
+		shoulderL = { rx = 28, rz = -10 },
+		elbowR = { rx = 78 },
+		elbowL = { rx = 78 },
+	}
+end
+
+local function scaredWalk(): Template
+	local keys: { TemplateKey } = {}
+	for step = 0, 8 do
+		local time = step * SCARED_WALK_STEP / 2
+		local side = if (step // 2) % 2 == 0 then 1 else -1
+		local pose = if step % 2 == 0 then scaredWalkStride(side) else scaredWalkPassing(side)
+		table.insert(keys, { time = time, easing = "Sine", direction = "InOut", pose = pose })
+	end
+
+	-- Slow, nervous scan: right, hold, left, hold, front. Head kept low.
+	local looks = {
+		{ time = 0.0, rx = -8, ry = 0 },
+		{ time = 0.5, rx = -6, ry = -40 },
+		{ time = 1.0, rx = -6, ry = -35 },
+		{ time = 1.5, rx = -6, ry = 40 },
+		{ time = 2.0, rx = -6, ry = 35 },
+		{ time = 2.4, rx = -8, ry = 0 },
+	}
+	for _, look in looks do
+		table.insert(keys, {
+			time = look.time,
+			easing = "Sine",
+			direction = "InOut",
+			pose = { neck = { rx = look.rx, ry = look.ry } },
+		})
+	end
+
+	return {
+		id = "ScaredWalk",
+		name = "Scared Walk",
 		looped = true,
 		priority = Enum.AnimationPriority.Movement,
 		keys = keys,
@@ -547,6 +620,7 @@ local LIST: { Template } = {
 		},
 	},
 	scaredIdle(),
+	scaredWalk(),
 	scaredRun(),
 }
 
