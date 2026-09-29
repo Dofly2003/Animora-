@@ -11,8 +11,10 @@ local Interpolate = require(script.Parent.Parent.Core.Interpolate)
 local Commands = require(script.Parent.Parent.Core.Commands)
 local Signal = require(script.Parent.Parent.Core.Signal)
 local Mirror = require(script.Parent.Parent.Core.Mirror)
+local Bake = require(script.Parent.Parent.Core.Bake)
 local RigBinder = require(script.Parent.RigBinder)
 local Preview = require(script.Parent.Preview)
+local IO = require(script.Parent.IO)
 
 local DEFAULT_FPS = 30
 local DEFAULT_LENGTH = 2 -- seconds
@@ -24,14 +26,31 @@ export type KeyRef = { joint: string, time: number }
 
 type RigState = { clip: Model.Clip }
 
--- Deep copy of every track plus the key selection, used for undo of multi-key edits.
-type Snapshot = { tracks: { [string]: { Model.Keyframe } }, selection: { KeyRef } }
+-- Deep copy of every track, the clip settings and the key selection, used for undo.
+type ClipSettings = {
+	name: string,
+	length: number,
+	fps: number,
+	looped: boolean,
+	priority: Enum.AnimationPriority,
+}
+type Snapshot = { tracks: { [string]: { Model.Keyframe } }, settings: ClipSettings, selection: { KeyRef } }
 
 -- Copied keyframes, shared across rigs so poses can be pasted onto another rig.
 type ClipboardItem = { joint: string, offset: number, keyframe: Model.Keyframe }
 local clipboard: { ClipboardItem } = {}
 
 local SUPPORTED_FPS = { 24, 30, 60 }
+local PRIORITIES = {
+	Enum.AnimationPriority.Core,
+	Enum.AnimationPriority.Idle,
+	Enum.AnimationPriority.Movement,
+	Enum.AnimationPriority.Action,
+	Enum.AnimationPriority.Action2,
+	Enum.AnimationPriority.Action3,
+	Enum.AnimationPriority.Action4,
+}
+local MIN_LENGTH, MAX_LENGTH = 0.1, 600 -- seconds
 local TIME_EPSILON = 1e-4
 
 local Session = {}
@@ -44,8 +63,11 @@ export type Session = typeof(setmetatable(
 		jointOrder: { RigBinder.JointEntry },
 		clip: Model.Clip?,
 		history: Commands.History,
-		-- Called after every recorded edit with its name (used to add a Studio undo waypoint).
+		-- Called after every recorded edit with its name (used to add a Studio undo waypoint
+		-- and to save the clip into the place).
 		onEdit: ((name: string) -> ())?,
+		-- Loads a rig's saved clip the first time the rig is opened in this session.
+		loadClip: ((rig: Model) -> Model.Clip?)?,
 		time: number,
 		selectedJoint: string?,
 		selectedKeys: { KeyRef },
@@ -68,6 +90,7 @@ function Session.new(): Session
 		-- One history for all rigs: undoing an edit switches back to the rig it was made on.
 		history = Commands.History.new(),
 		onEdit = nil,
+		loadClip = nil,
 		time = 0,
 		selectedJoint = nil,
 		selectedKeys = {},
@@ -101,9 +124,12 @@ function Session.setRig(self: Session, rig: Model?)
 		local binder = RigBinder.new(rig)
 		local state = self._rigStates[rig]
 		if not state then
-			local clip = Model.newClip(rig.Name, DEFAULT_FPS)
-			clip.length = DEFAULT_LENGTH
-			state = { clip = clip }
+			local clip = self.loadClip and self.loadClip(rig)
+			if not clip then
+				clip = Model.newClip(rig.Name, DEFAULT_FPS)
+				clip.length = DEFAULT_LENGTH
+			end
+			state = { clip = clip :: Model.Clip }
 			self._rigStates[rig] = state
 		end
 		self.binder = binder
@@ -366,7 +392,15 @@ function Session._snapshot(self: Session): Snapshot
 	for index, ref in self.selectedKeys do
 		selection[index] = table.clone(ref)
 	end
-	return { tracks = tracks, selection = selection }
+	local clip = self.clip :: Model.Clip
+	local settings = {
+		name = clip.name,
+		length = clip.length,
+		fps = clip.fps,
+		looped = clip.looped,
+		priority = clip.priority,
+	}
+	return { tracks = tracks, settings = settings, selection = selection }
 end
 
 function Session._restore(self: Session, snapshot: Snapshot)
@@ -379,6 +413,12 @@ function Session._restore(self: Session, snapshot: Snapshot)
 		end
 		clip.tracks[name] = { jointName = name, keyframes = copy }
 	end
+	clip.name = snapshot.settings.name
+	clip.length = snapshot.settings.length
+	clip.fps = snapshot.settings.fps
+	clip.looped = snapshot.settings.looped
+	clip.priority = snapshot.settings.priority
+	self.time = math.min(self.time, clip.length)
 	local selection = {}
 	for index, ref in snapshot.selection do
 		selection[index] = table.clone(ref)
@@ -626,6 +666,8 @@ function Session.jumpToKey(self: Session, direction: number)
 	end
 end
 
+-- Clip settings (undoable, saved like any other edit) --------------------------------
+
 -- Cycles 24 -> 30 -> 60 FPS. Keyframes keep their time in seconds.
 function Session.cycleFps(self: Session): number?
 	local clip = self.clip
@@ -633,10 +675,93 @@ function Session.cycleFps(self: Session): number?
 		return nil
 	end
 	local index = table.find(SUPPORTED_FPS, clip.fps) or 0
-	clip.fps = SUPPORTED_FPS[index % #SUPPORTED_FPS + 1]
+	local fps = SUPPORTED_FPS[index % #SUPPORTED_FPS + 1]
+	self:_edit("Change FPS", function(editClip)
+		editClip.fps = fps
+	end)
 	self:setTime(self.time)
-	self.changed:Fire("clip")
-	return clip.fps
+	return fps
+end
+
+-- Sets the clip length in seconds. Keyframes after the new end are kept (shown shaded).
+function Session.setLength(self: Session, seconds: number)
+	local clip = self.clip
+	if not clip or seconds ~= seconds then
+		return
+	end
+	local length = math.clamp(seconds, MIN_LENGTH, MAX_LENGTH)
+	if math.abs(length - clip.length) < TIME_EPSILON then
+		return
+	end
+	self:_edit("Change length", function(editClip)
+		editClip.length = length
+	end)
+end
+
+function Session.toggleLooped(self: Session)
+	local clip = self.clip
+	if not clip then
+		return
+	end
+	local looped = not clip.looped
+	self:_edit("Toggle loop", function(editClip)
+		editClip.looped = looped
+	end)
+end
+
+-- Cycles Core -> Idle -> Movement -> Action -> Action2..4.
+function Session.cyclePriority(self: Session)
+	local clip = self.clip
+	if not clip then
+		return
+	end
+	local index = table.find(PRIORITIES, clip.priority) or 0
+	local priority = PRIORITIES[index % #PRIORITIES + 1]
+	self:_edit("Change priority", function(editClip)
+		editClip.priority = priority
+	end)
+end
+
+-- Import / export ------------------------------------------------------------------------
+
+-- Replaces the clip's keyframes with those of a KeyframeSequence (undoable). Returns the
+-- number of keyframes imported.
+function Session.importSequence(self: Session, sequence: KeyframeSequence): number
+	local binder = self.binder
+	if not binder or not self.clip then
+		return 0
+	end
+	local result = IO.importKeyframeSequence(sequence, function(name)
+		return binder.joints[name] ~= nil
+	end)
+	if result.keyframeCount == 0 then
+		return 0
+	end
+	self:_edit("Import animation", function(clip)
+		table.clear(clip.tracks)
+		for name, keyframes in result.tracks do
+			clip.tracks[name] = { jointName = name, keyframes = keyframes }
+		end
+		clip.length = math.max(result.length, MIN_LENGTH)
+		clip.looped = sequence.Loop
+		clip.priority = sequence.Priority
+		self.selectedKeys = {}
+	end)
+	self:setTime(0)
+	return result.keyframeCount
+end
+
+-- Builds a KeyframeSequence of the clip up to the last keyframe, baked per frame so
+-- every easing style plays back exactly like the preview. Not parented anywhere.
+function Session.buildExport(self: Session): KeyframeSequence?
+	local clip = self.clip
+	local binder = self.binder
+	if not (clip and binder) or next(clip.tracks) == nil then
+		return nil
+	end
+	local exportClip = table.clone(clip)
+	exportClip.length = self:playbackEnd()
+	return IO.exportKeyframeSequence(Bake.bakeClip(exportClip), binder.joints)
 end
 
 function Session.destroy(self: Session)

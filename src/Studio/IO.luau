@@ -1,7 +1,7 @@
 --!strict
 -- Converts between Animora clips and Roblox KeyframeSequence instances.
--- Phase 2 tasks: import (KeyframeSequence -> Clip) and full easing mapping.
--- Spike A (week 1) validates export + publish; see docs/spike-results.md.
+-- Export writes baked Linear keys (see Core/Bake); import reads Pose trees back into
+-- tracks. Spike A (week 1) validated export + publish; see docs/spike-results.md.
 
 local Model = require(script.Parent.Parent.Core.Model)
 local RigBinder = require(script.Parent.RigBinder)
@@ -94,6 +94,67 @@ function IO.exportKeyframeSequence(clip: Model.Clip, joints: { [string]: RigBind
 	end
 
 	return sequence
+end
+
+-- Pose easing styles Roblox supports, mapped back to Animora styles on import.
+local FROM_POSE_EASING_STYLE: { [string]: Model.EasingStyle } = {
+	Linear = "Linear",
+	Constant = "Constant",
+	Cubic = "Cubic",
+	CubicV2 = "Cubic",
+	Elastic = "Elastic",
+	Bounce = "Bounce",
+}
+
+export type ImportResult = {
+	tracks: { [string]: { Model.Keyframe } },
+	length: number,
+	keyframeCount: number,
+}
+
+-- Reads every weighted Pose of a KeyframeSequence into per-joint keyframes. Poses with
+-- Weight 0 only hold the hierarchy together and are skipped. Only joints the rig has
+-- (per `hasJoint`) are imported.
+function IO.importKeyframeSequence(sequence: KeyframeSequence, hasJoint: (name: string) -> boolean): ImportResult
+	local tracks: { [string]: { Model.Keyframe } } = {}
+	local length = 0
+	local count = 0
+
+	local function readPose(pose: Instance, time: number)
+		if pose:IsA("Pose") then
+			if pose.Weight > 0 and hasJoint(pose.Name) then
+				local keyframes = tracks[pose.Name] or {}
+				tracks[pose.Name] = keyframes
+				table.insert(
+					keyframes,
+					Model.newKeyframe(
+						time,
+						pose.CFrame,
+						FROM_POSE_EASING_STYLE[pose.EasingStyle.Name] or "Linear",
+						pose.EasingDirection.Name :: any
+					)
+				)
+				count += 1
+			end
+			for _, child in pose:GetChildren() do
+				readPose(child, time)
+			end
+		end
+	end
+
+	for _, keyframe in sequence:GetKeyframes() do
+		local keyframeInstance = keyframe :: Keyframe
+		length = math.max(length, keyframeInstance.Time)
+		for _, child in keyframeInstance:GetChildren() do
+			readPose(child, keyframeInstance.Time)
+		end
+	end
+	for _, keyframes in tracks do
+		table.sort(keyframes, function(a, b)
+			return a.time < b.time
+		end)
+	end
+	return { tracks = tracks, length = length, keyframeCount = count }
 end
 
 return IO

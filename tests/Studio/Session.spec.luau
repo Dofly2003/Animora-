@@ -4,6 +4,7 @@ local describe, it, expect, afterEach = JestGlobals.describe, JestGlobals.it, Je
 local Animora = game:GetService("ReplicatedStorage").Animora
 local Session = require(Animora.Studio.Session)
 local RigBinder = require(Animora.Studio.RigBinder)
+local Model = require(Animora.Core.Model)
 
 local REST_C0 = CFrame.new(1, 0.5, 0)
 
@@ -316,6 +317,61 @@ describe("Session", function()
 		expect(shoulderAttachment.CFrame:FuzzyEq(attachmentRest, 1e-4)).toBe(true)
 		expect(shoulderAttachment:GetAttribute("AnimoraRestC0")).toBeNil()
 		session:destroy()
+	end)
+
+	it("changes the clip length and undo restores it", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		session:setLength(5)
+		expect((session.clip :: any).length).toBe(5)
+		session:undo()
+		expect((session.clip :: any).length).toBe(2)
+		session:destroy()
+	end)
+
+	it("loads a saved clip the first time a rig is opened", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local saved = Model.newClip("Saved", 24)
+		Model.setKeyframe(Model.getOrCreateTrack(saved, "Arm"), Model.newKeyframe(0.25, CFrame.identity))
+		local session = Session.new()
+		session.loadClip = function()
+			return saved
+		end
+		session:setRig(rig)
+		expect(session.clip).toBe(saved)
+		session:destroy()
+	end)
+
+	it("exports a clip and imports it back onto another rig", function()
+		local rigA = makeRig()
+		local rigB = makeRig()
+		table.insert(rigs, rigA)
+		table.insert(rigs, rigB)
+		local raised = CFrame.Angles(0, 0, math.rad(80))
+
+		local source = Session.new()
+		source:setRig(rigA)
+		source:setTime(0)
+		source:commitJoint("Arm", CFrame.identity)
+		source:setTime(0.5)
+		source:commitJoint("Arm", raised)
+		local sequence = source:buildExport() :: KeyframeSequence
+		expect(sequence).never.toBeNil()
+		-- Baked at 30 FPS from 0 to the last keyframe (0.5 s): 16 keyframes.
+		expect(#sequence:GetKeyframes()).toBe(16)
+
+		local target = Session.new()
+		target:setRig(rigB)
+		expect(target:importSequence(sequence)).toBe(16)
+		target:setTime(0.5)
+		expect(target:getJointTransform("Arm"):FuzzyEq(raised, 1e-4)).toBe(true)
+
+		source:destroy()
+		target:destroy()
+		sequence:Destroy()
 	end)
 
 	it("keeps each rig's clip when switching rigs", function()

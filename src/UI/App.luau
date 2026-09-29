@@ -15,6 +15,7 @@ local Gizmo = require(script.Parent.Parent.Studio.Gizmo)
 local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
 local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
 local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
+local Storage = require(script.Parent.Parent.Studio.Storage)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 
@@ -22,7 +23,7 @@ local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
 
 local ROW_HEIGHT = 34
-local TOOLBAR_HEIGHT = ROW_HEIGHT * 2
+local TOOLBAR_HEIGHT = ROW_HEIGHT * 3
 
 local App = {}
 
@@ -41,7 +42,16 @@ export type AppActions = {
 function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions: AppActions): AppHandle
 	local scope = Fusion.scoped(Fusion)
 	local session = Session.new()
-	session.onEdit = StudioUndo.record
+	-- Every edit becomes a Studio undo waypoint that also saves the clip into the place.
+	session.onEdit = function(name: string)
+		StudioUndo.record(name, function()
+			local rig, clip = session.rig, session.clip
+			if rig and clip then
+				Storage.saveClip(rig, clip)
+			end
+		end)
+	end
+	session.loadClip = Storage.loadClip
 	local gizmo = Gizmo.new(session)
 
 	local language = scope:Value(Localization.getLanguage())
@@ -241,6 +251,61 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		return Localization.t("editor.fps", { fps = if clip then clip.fps else "-" })
 	end)
 
+	local loopSelected = scope:Computed(function(use)
+		use(sessionTick)
+		return session.clip ~= nil and session.clip.looped
+	end)
+
+	local priorityText = scope:Computed(function(use)
+		use(language)
+		use(sessionTick)
+		local clip = session.clip
+		return Localization.t("editor.priority", { priority = if clip then clip.priority.Name else "-" })
+	end)
+
+	local lengthText = scope:Computed(function(use)
+		use(sessionTick)
+		local clip = session.clip
+		return if clip then string.format("%.2f", clip.length) else ""
+	end)
+
+	local function exportClip()
+		local rig = session.rig
+		local sequence = session:buildExport()
+		if not (rig and sequence) then
+			notice:set({ key = "editor.export.empty" })
+			return
+		end
+		local exported = sequence :: KeyframeSequence
+		local path = ""
+		-- Its own waypoint name: undoing an export must not undo a clip edit.
+		StudioUndo.recordOther("Animora export", function()
+			path = Storage.placeExport(rig, exported)
+		end)
+		Selection:Set({ exported })
+		notice:set({ key = "editor.export.done", args = { path = path } })
+	end
+
+	local function importClip()
+		local sequence: KeyframeSequence? = nil
+		for _, selected in Selection:Get() do
+			if selected:IsA("KeyframeSequence") then
+				sequence = selected
+				break
+			end
+		end
+		if not sequence then
+			notice:set({ key = "editor.import.select" })
+			return
+		end
+		local imported = sequence :: KeyframeSequence
+		local count = session:importSequence(imported)
+		notice:set({
+			key = if count > 0 then "editor.import.done" else "editor.import.none",
+			args = { count = count, name = imported.Name },
+		})
+	end
+
 	local function row(order: number, children: { any })
 		local rowChildren: { any } = {
 			scope:New("UIPadding")({
@@ -279,6 +344,26 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		use(sessionTick)
 		return Localization.t(if session.playing then "editor.pause" else "editor.play")
 	end)
+
+	local lengthBox = scope:New("TextBox")({
+		LayoutOrder = 2,
+		Size = UDim2.fromOffset(56, 24),
+		FontFace = Theme.FONT,
+		TextSize = Theme.TEXT_SIZE,
+		ClearTextOnFocus = false,
+		Text = lengthText,
+		TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
+		BackgroundColor3 = color(Enum.StudioStyleGuideColor.InputFieldBackground),
+		BorderColor3 = color(Enum.StudioStyleGuideColor.InputFieldBorder),
+	}) :: TextBox
+	track(lengthBox.FocusLost:Connect(function()
+		local seconds = tonumber(lengthBox.Text)
+		if seconds then
+			session:setLength(seconds)
+		end
+		local clip = session.clip
+		lengthBox.Text = if clip then string.format("%.2f", clip.length) else ""
+	end))
 
 	-- Layout --------------------------------------------------------------------
 	local timelineHost = scope:New("Frame")({
@@ -466,6 +551,57 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							onClick = function()
 								session:cycleFps()
 							end,
+						}),
+					}),
+					row(3, {
+						scope:New("TextLabel")({
+							LayoutOrder = 1,
+							Size = UDim2.fromOffset(52, 26),
+							BackgroundTransparency = 1,
+							FontFace = Theme.FONT,
+							TextSize = Theme.TEXT_SIZE,
+							Text = text("editor.length"),
+							TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
+						}),
+						lengthBox,
+						scope:New("TextLabel")({
+							LayoutOrder = 3,
+							Size = UDim2.fromOffset(12, 26),
+							BackgroundTransparency = 1,
+							FontFace = Theme.FONT,
+							TextSize = Theme.TEXT_SIZE,
+							Text = "s",
+							TextColor3 = color(Enum.StudioStyleGuideColor.DimmedText),
+						}),
+						button({
+							order = 4,
+							width = 60,
+							text = text("editor.loop"),
+							selected = loopSelected,
+							onClick = function()
+								session:toggleLooped()
+							end,
+						}),
+						button({
+							order = 5,
+							width = 150,
+							text = priorityText,
+							onClick = function()
+								session:cyclePriority()
+							end,
+						}),
+						divider(6),
+						button({
+							order = 7,
+							width = 70,
+							text = text("editor.export"),
+							onClick = exportClip,
+						}),
+						button({
+							order = 8,
+							width = 70,
+							text = text("editor.import"),
+							onClick = importClip,
 						}),
 					}),
 				},
