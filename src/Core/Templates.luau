@@ -1,5 +1,5 @@
 --!strict
--- Starter animations (Idle, Walk, Run, Jump, Wave) authored for Animora. They are simple,
+-- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle) authored for Animora. They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
 -- Poses are written per *logical* joint (hipR, kneeL, ...) in the parent part's space,
@@ -90,6 +90,98 @@ local function copyPose(pose: { [string]: JointPose }): { [string]: JointPose }
 		copy[joint] = table.clone(value)
 	end
 	return copy
+end
+
+-- Scared Idle: a frightened, stiff stance (half crouch, hunched, hands pulled to the
+-- chest) that keeps trembling while the head snaps left and right, scanning for
+-- something that could appear at any moment.
+local SCARED_LENGTH = 4.0
+local TREMBLE_STEP = 0.08 -- seconds between tremble keys (about 12 shakes per second)
+
+-- Base posture; tremble keys add small offsets on top of it.
+local SCARED_BASE: { [string]: JointPose } = {
+	root = { y = -0.25 },
+	waist = { rx = -12 },
+	hipR = { rx = 18 },
+	hipL = { rx = 18 },
+	kneeR = { rx = -30 },
+	kneeL = { rx = -30 },
+	ankleR = { rx = 12 },
+	ankleL = { rx = 12 },
+	shoulderR = { rx = 28, rz = -10 },
+	shoulderL = { rx = 28, rz = -10 },
+	elbowR = { rx = 75 },
+	elbowL = { rx = 75 },
+}
+
+-- Head: quick glances right and left, holding each look with small scanning motions.
+-- Negative ry turns the face to the character's right; negative rx keeps the head low.
+local SCARED_LOOKS: { { time: number, ry: number, rx: number, easing: Model.EasingStyle } } = {
+	{ time = 0.0, ry = 0, rx = -6, easing = "Sine" },
+	{ time = 0.5, ry = 0, rx = -6, easing = "Quad" },
+	{ time = 0.75, ry = -55, rx = -2, easing = "Sine" }, -- snap right
+	{ time = 1.3, ry = -45, rx = -4, easing = "Sine" },
+	{ time = 1.7, ry = -52, rx = -2, easing = "Quad" },
+	{ time = 2.0, ry = 55, rx = -2, easing = "Sine" }, -- snap left
+	{ time = 2.6, ry = 45, rx = -5, easing = "Sine" },
+	{ time = 3.0, ry = 52, rx = -3, easing = "Quad" },
+	{ time = 3.35, ry = 0, rx = -8, easing = "Sine" }, -- back to the front, head low
+	{ time = 4.0, ry = 0, rx = -6, easing = "Sine" },
+}
+
+-- Tremble amplitudes (degrees / studs) per joint and axis.
+local TREMBLE: { [string]: { [string]: number } } = {
+	waist = { rx = 1.2, rz = 0.8 },
+	shoulderR = { rx = 1.5, rz = 2.5 },
+	shoulderL = { rx = 1.5, rz = 2.5 },
+	elbowR = { rx = 3 },
+	elbowL = { rx = 3 },
+	root = { y = 0.012 },
+}
+
+local function scaredIdle(): Template
+	local keys: { TemplateKey } = {}
+
+	-- Tremble: alternating small offsets on top of the base posture. Deterministic
+	-- pseudo-random amplitudes keep it organic; the first and last keys are the plain
+	-- base pose so the loop is seamless.
+	local random = Random.new(1337)
+	local steps = math.round(SCARED_LENGTH / TREMBLE_STEP)
+	for step = 0, steps do
+		local time = math.min(step * TREMBLE_STEP, SCARED_LENGTH)
+		local edge = step == 0 or step == steps
+		local sign = if step % 2 == 0 then 1 else -1
+		local pose: { [string]: JointPose } = {}
+		for joint, base in SCARED_BASE do
+			local value = table.clone(base)
+			local amplitudes = TREMBLE[joint]
+			if amplitudes and not edge then
+				for axis, amplitude in amplitudes do
+					local jitter = sign * amplitude * random:NextNumber(0.5, 1);
+					(value :: any)[axis] = ((value :: any)[axis] or 0) + jitter
+				end
+			end
+			pose[joint] = value
+		end
+		table.insert(keys, { time = time, easing = "Linear", direction = "InOut", pose = pose })
+	end
+
+	for _, look in SCARED_LOOKS do
+		table.insert(keys, {
+			time = look.time,
+			easing = look.easing,
+			direction = "Out",
+			pose = { neck = { rx = look.rx, ry = look.ry } },
+		})
+	end
+
+	return {
+		id = "ScaredIdle",
+		name = "Scared Idle",
+		looped = true,
+		priority = Enum.AnimationPriority.Idle,
+		keys = keys,
+	}
 end
 
 local LIST: { Template } = {
@@ -393,6 +485,7 @@ local LIST: { Template } = {
 			},
 		},
 	},
+	scaredIdle(),
 }
 
 -- R6 has no separate waist: lean its upper body a little through the root instead.

@@ -28,12 +28,12 @@ local function build(id: string, joints: { [string]: boolean })
 end
 
 describe("Templates", function()
-	it("offers the five starter animations", function()
+	it("offers the starter animations", function()
 		local ids = {}
 		for _, template in Templates.list() do
 			table.insert(ids, template.id)
 		end
-		expect(table.concat(ids, ",")).toBe("Idle,Walk,Run,Jump,Wave")
+		expect(table.concat(ids, ",")).toBe("Idle,Walk,Run,Jump,Wave,ScaredIdle")
 	end)
 
 	it("builds Walk for R15 with legs swinging in opposite directions", function()
@@ -54,6 +54,29 @@ describe("Templates", function()
 		-- An arm hanging down (-Y) tilted outwards: right goes to +X, left to -X.
 		expect(right:VectorToWorldSpace(Vector3.new(0, -1, 0)).X > 0).toBe(true)
 		expect(left:VectorToWorldSpace(Vector3.new(0, -1, 0)).X < 0).toBe(true)
+	end)
+
+	it("builds Scared Idle as a seamless trembling loop with head glances", function()
+		local clip = build("ScaredIdle", R15)
+		expect(clip.looped).toBe(true)
+		expect(clip.length).toBe(4)
+		expect(clip.priority).toBe(Enum.AnimationPriority.Idle)
+
+		-- Many tremble keys on the shoulders, and the loop starts and ends on the same pose.
+		local shoulder = clip.tracks.RightUpperArm.keyframes
+		expect(#shoulder > 40).toBe(true)
+		expect(shoulder[1].value:FuzzyEq(shoulder[#shoulder].value, 1e-4)).toBe(true)
+
+		-- The head looks right (face towards +X) and later left (-X).
+		local head = clip.tracks.Head.keyframes
+		local sawRight, sawLeft = false, false
+		for _, keyframe in head do
+			local facing = keyframe.value:VectorToWorldSpace(Vector3.new(0, 0, -1))
+			sawRight = sawRight or facing.X > 0.5
+			sawLeft = sawLeft or facing.X < -0.5
+		end
+		expect(sawRight).toBe(true)
+		expect(sawLeft).toBe(true)
 	end)
 
 	it("builds for R6 without knees and elbows", function()
