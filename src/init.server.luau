@@ -1,6 +1,15 @@
 --!strict
 -- Animora plugin entry point: creates the toolbar button and the main dock widget.
 
+local RunGuard = require(script.Studio.RunGuard)
+
+-- Inside a running play test (Play F5 copies the edit place) Animora stays out of the
+-- way: undo any preview offsets that were copied in, and do not start the editor.
+if RunGuard.isRunning() then
+	RunGuard.restoreAll()
+	return
+end
+
 local Localization = require(script.Localization)
 local Settings = require(script.Studio.Settings)
 local App = require(script.UI.App)

@@ -16,6 +16,7 @@ local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
 local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
 local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
+local RunGuard = require(script.Parent.Parent.Studio.RunGuard)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 local ImportMenu = require(script.Parent.ImportMenu)
@@ -88,7 +89,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	-- Clicking in the viewport picks a single body part (Studio's tools are switched off
 	-- while the panel is open, so the whole model is not selected or rotated).
 	local picker = ViewportPicker.new(actions.plugin, session, function()
-		return not Fusion.peek(devMode)
+		return not Fusion.peek(devMode) and not RunGuard.isRunning()
 	end, function()
 		return gizmo:isDragging()
 	end)
@@ -105,8 +106,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 
 	-- Selecting a rig part in the viewport picks the rig and the joint it belongs to.
 	local function onSelectionChanged()
-		-- Never touch rigs while the panel is closed or the spike tools are active.
-		if Fusion.peek(devMode) or (parent:IsA("PluginGui") and not parent.Enabled) then
+		-- Never touch rigs while the panel is closed, the spike tools are active or a Run
+		-- (F8) test is going on.
+		if Fusion.peek(devMode) or RunGuard.isRunning() or (parent:IsA("PluginGui") and not parent.Enabled) then
 			return
 		end
 		local selected = Selection:Get()[1]
@@ -132,6 +134,12 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 	end
 	track(Selection.SelectionChanged:Connect(onSelectionChanged))
+
+	-- Run (F8): release the rig so the game starts from the rest pose, not the preview pose
+	-- (otherwise animations would play on top of it).
+	track(RunGuard.watch(function()
+		session:setRig(nil)
+	end))
 
 	-- Studio's Ctrl+Z / Ctrl+Y: when the waypoint is an Animora edit, undo/redo it in the
 	-- session too. Either way Studio may have rewritten the preview C0s, so re-apply the pose.
