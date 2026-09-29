@@ -18,6 +18,7 @@ local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
+local ImportMenu = require(script.Parent.ImportMenu)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -286,24 +287,31 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		notice:set({ key = "editor.export.done", args = { path = path } })
 	end
 
-	local function importClip()
-		local sequence: KeyframeSequence? = nil
-		for _, selected in Selection:Get() do
-			if selected:IsA("KeyframeSequence") then
-				sequence = selected
-				break
-			end
-		end
-		if not sequence then
-			notice:set({ key = "editor.import.select" })
-			return
-		end
-		local imported = sequence :: KeyframeSequence
-		local count = session:importSequence(imported)
+	local function importSequence(sequence: KeyframeSequence, sourceName: string)
+		local count = session:importSequence(sequence)
 		notice:set({
 			key = if count > 0 then "editor.import.done" else "editor.import.none",
-			args = { count = count, name = imported.Name },
+			args = { count = count, name = sourceName },
 		})
+	end
+
+	-- Import: a KeyframeSequence selected in the Explorer is imported directly; otherwise
+	-- a menu lists the animations saved in the place and offers import by asset ID.
+	local importMenu: ImportMenu.Handle? = nil
+	local function importClip()
+		if not session.rig then
+			notice:set({ key = "editor.status.noRig" })
+			return
+		end
+		for _, selected in Selection:Get() do
+			if selected:IsA("KeyframeSequence") then
+				importSequence(selected, selected.Name)
+				return
+			end
+		end
+		if importMenu then
+			importMenu:open()
+		end
 	end
 
 	local function row(order: number, children: { any })
@@ -612,6 +620,12 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	})
 
 	local timeline = Timeline.mount(timelineHost, session)
+	importMenu = ImportMenu.mount(timelineHost, {
+		importSequence = importSequence,
+		notify = function(key, args)
+			notice:set({ key = key, args = args })
+		end,
+	})
 	onSelectionChanged()
 	updatePicker()
 
@@ -626,6 +640,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			cleanup()
 		end
 		timeline:destroy()
+		if importMenu then
+			importMenu:destroy()
+		end
 		picker:destroy()
 		gizmo:destroy()
 		session:destroy()

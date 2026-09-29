@@ -45,6 +45,17 @@ return {
 	["shortcut.ran"] = "Shortcut: {name}",
 	["shortcut.needsRig"] = "Shortcut {name} diterima, tapi buka panel Animora dan pilih rig dulu.",
 
+	["import.title"] = "Impor animasi ke rig ini",
+	["import.close"] = "Tutup",
+	["import.fromId"] = "Dari asset ID:",
+	["import.load"] = "Muat",
+	["import.fromPlace"] = "Atau pilih yang tersimpan di place ini (ServerStorage > RBX_ANIMSAVES):",
+	["import.empty"] = "Belum ada animasi tersimpan. Ekspor Animora dan Animation Editor menyimpannya di ServerStorage > RBX_ANIMSAVES.",
+	["import.badId"] = "Ketik asset ID animasinya (angka saja).",
+	["import.loading"] = "Memuat animasi {id}...",
+	["import.loadFailed"] = "Gagal memuat animasi {id}: {reason}",
+	["import.curveUnsupported"] = "Animasi {id} berupa curve animation; untuk sekarang hanya animasi keyframe yang bisa diimpor.",
+
 	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
 	["spike.wave"] = "Lambai",
 	["spike.stop"] = "Stop",

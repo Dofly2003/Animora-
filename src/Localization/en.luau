@@ -45,6 +45,17 @@ return {
 	["shortcut.ran"] = "Shortcut: {name}",
 	["shortcut.needsRig"] = "Shortcut {name} received, but open the Animora panel and select a rig first.",
 
+	["import.title"] = "Import an animation into this rig",
+	["import.close"] = "Close",
+	["import.fromId"] = "From asset ID:",
+	["import.load"] = "Load",
+	["import.fromPlace"] = "Or pick one saved in this place (ServerStorage > RBX_ANIMSAVES):",
+	["import.empty"] = "No saved animations yet. Animora's Export and the Animation Editor save them in ServerStorage > RBX_ANIMSAVES.",
+	["import.badId"] = "Type the animation's asset ID (numbers only).",
+	["import.loading"] = "Loading animation {id}...",
+	["import.loadFailed"] = "Could not load animation {id}: {reason}",
+	["import.curveUnsupported"] = "Animation {id} is a curve animation; only keyframe animations can be imported for now.",
+
 	["spike.title"] = "Dev tests - Spike C: edit-mode preview, Spike A: export, Spike B: timeline",
 	["spike.wave"] = "Wave",
 	["spike.stop"] = "Stop",
