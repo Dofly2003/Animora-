@@ -45,7 +45,7 @@ local function openTimelineTest()
 	(timelineTestWidget :: DockWidgetPluginGui).Enabled = true
 end
 
-local app = App.mount(widget, pluginSettings, { openTimelineTest = openTimelineTest })
+local app = App.mount(widget, pluginSettings, { openTimelineTest = openTimelineTest, plugin = plugin })
 
 Shortcuts.register(plugin, widget, function()
 	return app.session

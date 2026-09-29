@@ -14,6 +14,7 @@ local Session = require(script.Parent.Parent.Studio.Session)
 local Gizmo = require(script.Parent.Parent.Studio.Gizmo)
 local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
 local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
+local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Timeline = require(script.Parent.Timeline)
 local DevPanel = require(script.Parent.DevPanel)
 
@@ -34,6 +35,7 @@ export type AppHandle = {
 
 export type AppActions = {
 	openTimelineTest: () -> (),
+	plugin: Plugin,
 }
 
 function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions: AppActions): AppHandle
@@ -69,6 +71,24 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	end))
 	track(session.changed:Connect(function()
 		sessionTick:set(Fusion.peek(sessionTick) + 1)
+	end))
+
+	-- Clicking in the viewport picks a single body part (Studio's tools are switched off
+	-- while the panel is open, so the whole model is not selected or rotated).
+	local picker = ViewportPicker.new(actions.plugin, session, function()
+		return not Fusion.peek(devMode)
+	end, function()
+		return gizmo:isDragging()
+	end)
+	local function updatePicker()
+		local open = not parent:IsA("PluginGui") or parent.Enabled
+		picker:setActive(open and not Fusion.peek(devMode))
+	end
+	-- Re-activate after the user picked another Studio tool and came back to Animora.
+	track(session.changed:Connect(function(change)
+		if (change == "rig" or change == "selection") and session.rig then
+			updatePicker()
+		end
 	end))
 
 	-- Selecting a rig part in the viewport picks the rig and the joint it belongs to.
@@ -124,6 +144,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			else
 				session:setRig(nil)
 			end
+			updatePicker()
 		end))
 	end
 
@@ -364,6 +385,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 									session:setRig(nil)
 								end
 								devMode:set(enable)
+								updatePicker()
 								if not enable then
 									onSelectionChanged()
 								end
@@ -455,6 +477,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 
 	local timeline = Timeline.mount(timelineHost, session)
 	onSelectionChanged()
+	updatePicker()
 
 	local handle = {
 		session = session,
@@ -467,6 +490,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			cleanup()
 		end
 		timeline:destroy()
+		picker:destroy()
 		gizmo:destroy()
 		session:destroy()
 		scope:doCleanup()

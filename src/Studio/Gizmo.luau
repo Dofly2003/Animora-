@@ -19,6 +19,7 @@ export type Gizmo = typeof(setmetatable(
 	{} :: {
 		session: Session.Session,
 		handles: ArcHandles,
+		highlight: SelectionBox,
 		_connections: { any },
 		_drag: { jointName: string, start: CFrame, last: CFrame? }?,
 	},
@@ -32,9 +33,19 @@ function Gizmo.new(session: Session.Session): Gizmo
 	handles.Archivable = false
 	handles.Parent = CoreGui
 
+	-- Outline of the selected body part, so it is clear which joint the rings rotate.
+	local highlight = Instance.new("SelectionBox")
+	highlight.Name = "AnimoraSelectedPart"
+	highlight.Color3 = Color3.fromRGB(255, 170, 40)
+	highlight.LineThickness = 0.03
+	highlight.Visible = false
+	highlight.Archivable = false
+	highlight.Parent = CoreGui
+
 	local self = setmetatable({
 		session = session,
 		handles = handles,
+		highlight = highlight,
 		_connections = {},
 		_drag = nil,
 	}, Gizmo)
@@ -94,6 +105,12 @@ function Gizmo.refresh(self: Gizmo)
 	local joint = jointName and session.binder and session.binder.joints[jointName]
 	self.handles.Adornee = if joint then joint.Part1 else nil
 	self.handles.Visible = joint ~= nil and not session.playing
+	self.highlight.Adornee = if joint then joint.Part1 else nil
+	self.highlight.Visible = joint ~= nil
+end
+
+function Gizmo.isDragging(self: Gizmo): boolean
+	return self._drag ~= nil
 end
 
 function Gizmo.destroy(self: Gizmo)
@@ -101,6 +118,7 @@ function Gizmo.destroy(self: Gizmo)
 		connection:Disconnect()
 	end
 	self.handles:Destroy()
+	self.highlight:Destroy()
 end
 
 return Gizmo
