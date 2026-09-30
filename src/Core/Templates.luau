@@ -1,6 +1,6 @@
 --!strict
--- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Walk, Scared Run)
--- authored for Animora. They are simple,
+-- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Walk, Scared Run,
+-- Flashlight) authored for Animora. They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
 -- Poses are written per *logical* joint (hipR, kneeL, ...) in the parent part's space,
@@ -318,6 +318,84 @@ local function scaredWalk(): Template
 	}
 end
 
+-- Flashlight: a curious but wary explorer. Slow careful steps in place, the right arm
+-- held out in front aiming a flashlight, the left hand raised near the chest, and the
+-- upper body, head and light sweeping right and left together (two stride cycles,
+-- 2.8 s). Made for a horror loading screen or a "holding flashlight" walk.
+local FLASHLIGHT_STEP = 0.7 -- seconds per step
+
+-- Legs only; the upper body is keyed by the sweep below so the two never fight.
+local function flashlightStep(step: number): { [string]: JointPose }
+	local side = if (step // 2) % 2 == 0 then 1 else -1
+	if step % 2 == 0 then
+		-- Contact: `side` 1 = right foot forward.
+		return {
+			root = { y = -0.14, ry = 2 * side },
+			hipR = { rx = 8 + 18 * side },
+			hipL = { rx = 8 - 18 * side },
+			kneeR = { rx = if side > 0 then -15 else -30 },
+			kneeL = { rx = if side > 0 then -30 else -15 },
+			elbowR = { rx = 14 },
+		}
+	end
+	-- Passing: `side` carries the weight while the other leg lifts past it.
+	return {
+		root = { y = -0.06 },
+		hipR = { rx = if side > 0 then 4 else 28 },
+		hipL = { rx = if side > 0 then 28 else 4 },
+		kneeR = { rx = if side > 0 then -20 else -50 },
+		kneeL = { rx = if side > 0 then -50 else -20 },
+		elbowR = { rx = 18 },
+	}
+end
+
+local function flashlightExplore(): Template
+	local keys: { TemplateKey } = {}
+	for step = 0, 8 do
+		table.insert(keys, {
+			time = step * FLASHLIGHT_STEP / 2,
+			easing = "Sine",
+			direction = "InOut",
+			pose = flashlightStep(step),
+		})
+	end
+
+	-- Sweep: front, right, hold, left, hold, front. The waist turns the chest (and the
+	-- raised arm with it), the neck adds a bit more, and the shoulder aims the light a
+	-- little further out (+rz swings the raised right arm to the right).
+	-- Negative ry turns the face to the character's right.
+	local sweeps = {
+		{ time = 0.0, turn = 0, aim = 0 },
+		{ time = 0.6, turn = -1, aim = 1 },
+		{ time = 1.1, turn = -0.8, aim = 0.8 },
+		{ time = 1.8, turn = 1, aim = -1 },
+		{ time = 2.3, turn = 0.8, aim = -0.8 },
+		{ time = 2.8, turn = 0, aim = 0 },
+	}
+	for _, sweep in sweeps do
+		table.insert(keys, {
+			time = sweep.time,
+			easing = "Sine",
+			direction = "InOut",
+			pose = {
+				waist = { rx = -8, ry = 25 * sweep.turn },
+				neck = { rx = -4, ry = 30 * sweep.turn },
+				shoulderR = { rx = 80, rz = 12 * sweep.aim },
+				shoulderL = { rx = 40, rz = -12 },
+				elbowL = { rx = 70 },
+			},
+		})
+	end
+
+	return {
+		id = "FlashlightExplore",
+		name = "Flashlight",
+		looped = true,
+		priority = Enum.AnimationPriority.Movement,
+		keys = keys,
+	}
+end
+
 local LIST: { Template } = {
 	{
 		id = "Idle",
@@ -622,6 +700,7 @@ local LIST: { Template } = {
 	scaredIdle(),
 	scaredWalk(),
 	scaredRun(),
+	flashlightExplore(),
 }
 
 -- R6 has no separate waist: lean its upper body a little through the root instead.
