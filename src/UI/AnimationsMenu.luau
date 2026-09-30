@@ -142,8 +142,13 @@ function AnimationsMenu.mount(
 	templateLabel.ZIndex = 22
 	templateLabel.Parent = actions
 	-- Template buttons wrap onto a second row when the panel is narrow.
-	local templateGrid = Instance.new("Frame")
+	-- Scrolls once the templates no longer fit in three rows.
+	local templateGrid = Instance.new("ScrollingFrame")
 	templateGrid.BackgroundTransparency = 1
+	templateGrid.BorderSizePixel = 0
+	templateGrid.ScrollBarThickness = 6
+	templateGrid.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	templateGrid.CanvasSize = UDim2.new()
 	templateGrid.Position = UDim2.fromOffset(90, (ROW + 6) * 2)
 	templateGrid.Size = UDim2.new(1, -90, 0, ROW * 3 + 8)
 	templateGrid.ZIndex = 21

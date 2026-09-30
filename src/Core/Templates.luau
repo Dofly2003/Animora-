@@ -1,6 +1,7 @@
 --!strict
 -- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Walk, Scared Run,
--- Flashlight) authored for Animora. They are simple,
+-- Flashlight, and the Kuntilanak / Pocong / Tuyul ghost set) authored for Animora.
+-- They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
 -- Poses are written per *logical* joint (hipR, kneeL, ...) in the parent part's space,
@@ -396,6 +397,229 @@ local function flashlightExplore(): Template
 	}
 end
 
+-- Ghost set for horror games: Kuntilanak, Pocong and Tuyul. A ghost AI script moves the
+-- character around; these clips only give each ghost its body language.
+
+-- Kuntilanak: hovering with the head drooped to one side, limbs hanging limp and the
+-- toes pointing down.
+local function kuntiFloatPose(lift: number, sway: number): { [string]: JointPose }
+	return {
+		root = { y = lift, rx = 4, rz = sway },
+		waist = { rx = 3 },
+		neck = { rx = -18, rz = 14 + sway },
+		shoulderR = { rx = 12 + sway, rz = 10 },
+		shoulderL = { rx = 12 - sway, rz = 10 },
+		elbowR = { rx = 14 },
+		elbowL = { rx = 14 },
+		hipR = { rx = 8 },
+		hipL = { rx = 6 },
+		kneeR = { rx = -18 },
+		kneeL = { rx = -24 },
+		ankleR = { rx = -35 },
+		ankleL = { rx = -35 },
+	}
+end
+
+-- Flying chase: body pitched forward, arms reaching ahead, legs trailing behind.
+local function kuntiChasePose(lift: number, reach: number, sway: number): { [string]: JointPose }
+	return {
+		root = { y = lift, rx = -55, rz = sway },
+		waist = { rx = -10 },
+		neck = { rx = 50, ry = sway * 1.5 },
+		shoulderR = { rx = 140 + reach, rz = 8 },
+		shoulderL = { rx = 140 - reach, rz = 8 },
+		elbowR = { rx = 10 },
+		elbowL = { rx = 10 },
+		hipR = { rx = -25 },
+		hipL = { rx = -20 },
+		kneeR = { rx = -40 },
+		kneeL = { rx = -30 },
+		ankleR = { rx = -40 },
+		ankleL = { rx = -40 },
+	}
+end
+
+-- Jumpscare: the head snaps up and the arms fling wide as she lunges at the camera.
+local function kuntiLungePose(tremble: number): { [string]: JointPose }
+	return {
+		root = { y = 0.6, z = -1.2 - math.abs(tremble) * 0.02, rx = -15 },
+		waist = { rx = -15 },
+		neck = { rx = 25 - math.abs(tremble) * 0.5, ry = tremble },
+		shoulderR = { rx = 60 + tremble, rz = 110 + tremble },
+		shoulderL = { rx = 60 - tremble, rz = 110 - tremble },
+		elbowR = { rx = 20 },
+		elbowL = { rx = 20 },
+		hipR = { rx = 10 },
+		hipL = { rx = 10 },
+		kneeR = { rx = -20 },
+		kneeL = { rx = -20 },
+		ankleR = { rx = -35 },
+		ankleL = { rx = -35 },
+	}
+end
+
+-- Pocong: wrapped body, arms bound to the sides and legs tied together, so only the
+-- whole body bends and springs.
+local function pocongPose(y: number, bend: number, point: number, lean: number, nod: number): { [string]: JointPose }
+	return {
+		root = { y = y, rx = lean },
+		waist = { rx = 0 },
+		neck = { rx = nod, rz = 10 },
+		shoulderR = { rx = 0, rz = -3 },
+		shoulderL = { rx = 0, rz = -3 },
+		elbowR = { rx = 0 },
+		elbowL = { rx = 0 },
+		hipR = { rx = bend * 0.6 },
+		hipL = { rx = bend * 0.6 },
+		kneeR = { rx = -bend },
+		kneeL = { rx = -bend },
+		ankleR = { rx = point },
+		ankleL = { rx = point },
+	}
+end
+
+-- Tuyul: a small child ghost. Runs bent forward with the arms swept back, squats and
+-- giggles behind its hands.
+local function tuyulRunPose(step: number): { [string]: JointPose }
+	local side = if (step // 2) % 2 == 0 then 1 else -1
+	local pose = if step % 2 == 0 then stride(side, 40, 70, 0, 0, -0.35) else passing(side, 80, 8, -0.1, -12)
+	local root = pose.root or {}
+	root.rx = -18
+	pose.root = root
+	pose.waist = { rx = -12, ry = if step % 2 == 0 then -6 * side else 0 }
+	pose.neck = { rx = 22 }
+	pose.shoulderR = { rx = -75 + 8 * side, rz = 18 }
+	pose.shoulderL = { rx = -75 - 8 * side, rz = 18 }
+	pose.elbowR = { rx = 8 }
+	pose.elbowL = { rx = 8 }
+	return pose
+end
+
+local function tuyulSquatPose(bounce: number, lookY: number, lookX: number): { [string]: JointPose }
+	return {
+		root = { y = -1.4 + bounce, rx = -10 },
+		waist = { rx = -18 },
+		neck = { rx = 18 + lookX, ry = lookY },
+		hipR = { rx = 85 },
+		hipL = { rx = 85 },
+		kneeR = { rx = -120 },
+		kneeL = { rx = -120 },
+		ankleR = { rx = 35 },
+		ankleL = { rx = 35 },
+		shoulderR = { rx = 55, rz = -12 },
+		shoulderL = { rx = 55, rz = -12 },
+		elbowR = { rx = 125 },
+		elbowL = { rx = 125 },
+	}
+end
+
+local function ghostKey(
+	time: number,
+	pose: { [string]: JointPose },
+	easing: Model.EasingStyle?,
+	direction: Model.EasingDirection?
+): TemplateKey
+	return { time = time, easing = easing or "Sine", direction = direction or "InOut", pose = pose }
+end
+
+local function ghostTemplates(): { Template }
+	local tuyulRun: { TemplateKey } = {}
+	for step = 0, 4 do
+		table.insert(tuyulRun, ghostKey(step * 0.1, tuyulRunPose(step)))
+	end
+
+	return {
+		{
+			id = "KuntiFloat",
+			name = "Kunti Float",
+			looped = true,
+			priority = Enum.AnimationPriority.Idle,
+			keys = {
+				ghostKey(0, kuntiFloatPose(0.2, 0)),
+				ghostKey(1.5, kuntiFloatPose(0.7, 3)),
+				ghostKey(3, kuntiFloatPose(0.2, 0)),
+			},
+		},
+		{
+			id = "KuntiChase",
+			name = "Kunti Chase",
+			looped = true,
+			priority = Enum.AnimationPriority.Movement,
+			keys = {
+				ghostKey(0, kuntiChasePose(0.5, 6, -4)),
+				ghostKey(0.6, kuntiChasePose(0.9, -6, 4)),
+				ghostKey(1.2, kuntiChasePose(0.5, 6, -4)),
+			},
+		},
+		{
+			id = "KuntiLunge",
+			name = "Kunti Lunge",
+			looped = false,
+			priority = Enum.AnimationPriority.Action,
+			keys = {
+				ghostKey(0, kuntiFloatPose(0.2, 0), "Quad", "Out"),
+				ghostKey(0.12, kuntiLungePose(0), "Linear"),
+				ghostKey(0.35, kuntiLungePose(5), "Linear"),
+				ghostKey(0.55, kuntiLungePose(-5), "Linear"),
+				ghostKey(1, kuntiLungePose(0)),
+			},
+		},
+		{
+			id = "PocongHop",
+			name = "Pocong Hop",
+			looped = true,
+			priority = Enum.AnimationPriority.Movement,
+			keys = {
+				ghostKey(0, pocongPose(-0.5, 25, 12, -6, -8)),
+				ghostKey(0.15, pocongPose(0.3, 5, -15, 0, -4), "Quad", "Out"),
+				ghostKey(0.4, pocongPose(2.6, 10, -25, 4, 5), "Quad", "In"),
+				ghostKey(0.65, pocongPose(0.6, 5, -10, 0, -2)),
+				ghostKey(0.8, pocongPose(-0.5, 25, 12, -6, -8)),
+			},
+		},
+		{
+			id = "PocongLeap",
+			name = "Pocong Leap",
+			looped = false,
+			priority = Enum.AnimationPriority.Action,
+			keys = {
+				ghostKey(0, pocongPose(0, 5, 0, 0, -5)),
+				ghostKey(0.35, pocongPose(-1.2, 55, 25, -12, -12), "Quad", "In"),
+				ghostKey(0.45, pocongPose(1, 0, -30, 6, 0), "Quad", "Out"),
+				ghostKey(0.8, pocongPose(5, 12, -30, 10, 15), "Quad", "In"),
+				ghostKey(1.15, pocongPose(-0.8, 40, 20, -8, -10), "Quad", "Out"),
+				ghostKey(1.4, pocongPose(0, 10, 5, 0, -6)),
+			},
+		},
+		{
+			id = "TuyulRun",
+			name = "Tuyul Run",
+			looped = true,
+			priority = Enum.AnimationPriority.Movement,
+			keys = tuyulRun,
+		},
+		{
+			id = "TuyulPeek",
+			name = "Tuyul Peek",
+			looped = true,
+			priority = Enum.AnimationPriority.Idle,
+			keys = {
+				ghostKey(0, tuyulSquatPose(0, 0, 0)),
+				ghostKey(0.5, tuyulSquatPose(0, -50, 0), "Quad", "Out"),
+				ghostKey(1, tuyulSquatPose(0, -45, 0)),
+				ghostKey(1.2, tuyulSquatPose(0, 0, -5)),
+				ghostKey(1.3, tuyulSquatPose(0.25, 0, -8)),
+				ghostKey(1.4, tuyulSquatPose(0, 0, -5)),
+				ghostKey(1.5, tuyulSquatPose(0.25, 0, -8)),
+				ghostKey(1.6, tuyulSquatPose(0, 0, -5)),
+				ghostKey(2.1, tuyulSquatPose(0, 50, 0), "Quad", "Out"),
+				ghostKey(2.6, tuyulSquatPose(0, 45, 0)),
+				ghostKey(3, tuyulSquatPose(0, 0, 0)),
+			},
+		},
+	}
+end
+
 local LIST: { Template } = {
 	{
 		id = "Idle",
@@ -702,6 +926,9 @@ local LIST: { Template } = {
 	scaredRun(),
 	flashlightExplore(),
 }
+for _, template in ghostTemplates() do
+	table.insert(LIST, template)
+end
 
 -- R6 has no separate waist: lean its upper body a little through the root instead.
 local function withR6Waist(pose: { [string]: JointPose }, hasWaist: boolean): { [string]: JointPose }

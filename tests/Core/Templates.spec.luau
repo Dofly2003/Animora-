@@ -33,7 +33,10 @@ describe("Templates", function()
 		for _, template in Templates.list() do
 			table.insert(ids, template.id)
 		end
-		expect(table.concat(ids, ",")).toBe("Idle,Walk,Run,Jump,Wave,ScaredIdle,ScaredWalk,ScaredRun,FlashlightExplore")
+		expect(table.concat(ids, ",")).toBe(
+			"Idle,Walk,Run,Jump,Wave,ScaredIdle,ScaredWalk,ScaredRun,FlashlightExplore,"
+				.. "KuntiFloat,KuntiChase,KuntiLunge,PocongHop,PocongLeap,TuyulRun,TuyulPeek"
+		)
 	end)
 
 	it("builds Walk for R15 with legs swinging in opposite directions", function()
@@ -127,6 +130,30 @@ describe("Templates", function()
 		end
 		expect(sawRight and sawLeft).toBe(true)
 		expect(#clip.tracks.RightUpperArm.keyframes).toBe(6)
+	end)
+
+	it("builds the ghost set with seamless loops", function()
+		for _, id in { "KuntiFloat", "KuntiChase", "PocongHop", "TuyulRun", "TuyulPeek" } do
+			local clip = build(id, R15)
+			expect(clip.looped).toBe(true)
+			for _, track in clip.tracks do
+				local keys = track.keyframes
+				expect(keys[1].value:FuzzyEq(keys[#keys].value, 1e-4)).toBe(true)
+			end
+		end
+		for _, id in { "KuntiLunge", "PocongLeap" } do
+			expect(build(id, R15).looped).toBe(false)
+		end
+	end)
+
+	it("keeps the pocong's legs bound together", function()
+		local clip = build("PocongHop", R15)
+		local right, left = clip.tracks.RightLowerLeg.keyframes, clip.tracks.LeftLowerLeg.keyframes
+		for index, keyframe in right do
+			local rightX = keyframe.value:ToEulerAnglesXYZ()
+			local leftX = left[index].value:ToEulerAnglesXYZ()
+			expect(math.abs(rightX - leftX) < 1e-3).toBe(true)
+		end
 	end)
 
 	it("builds for R6 without knees and elbows", function()
