@@ -35,7 +35,8 @@ describe("Templates", function()
 		end
 		expect(table.concat(ids, ",")).toBe(
 			"Idle,Walk,Run,Jump,Wave,ScaredIdle,ScaredWalk,ScaredRun,FlashlightExplore,"
-				.. "KuntiFloat,KuntiChase,KuntiLunge,PocongHop,PocongLeap,TuyulRun,TuyulPeek"
+				.. "KuntiFloat,KuntiChase,KuntiLunge,PocongHop,PocongLeap,TuyulRun,TuyulPeek,"
+				.. "NiskalaIdle,NiskalaWalk,NiskalaRun,NiskalaJump"
 		)
 	end)
 
@@ -144,6 +145,26 @@ describe("Templates", function()
 		for _, id in { "KuntiLunge", "PocongLeap" } do
 			expect(build(id, R15).looped).toBe(false)
 		end
+	end)
+
+	it("builds the NISKALA set with seamless loops and a glance back", function()
+		for _, id in { "NiskalaIdle", "NiskalaWalk", "NiskalaRun" } do
+			local clip = build(id, R15)
+			expect(clip.looped).toBe(true)
+			for _, track in clip.tracks do
+				local keys = track.keyframes
+				expect(keys[1].value:FuzzyEq(keys[#keys].value, 1e-4)).toBe(true)
+			end
+			local glanced = false
+			for _, keyframe in clip.tracks.Head.keyframes do
+				local facing = keyframe.value:VectorToWorldSpace(Vector3.new(0, 0, -1))
+				glanced = glanced or facing.X < -0.4
+			end
+			expect(glanced).toBe(true)
+		end
+		local jump = build("NiskalaJump", R15)
+		expect(jump.looped).toBe(false)
+		expect(jump.length).toBeCloseTo(1.3, 4)
 	end)
 
 	it("keeps the pocong's legs bound together", function()

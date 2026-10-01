@@ -1,6 +1,7 @@
 --!strict
 -- Starter animations (Idle, Walk, Run, Jump, Wave, Scared Idle, Scared Walk, Scared Run,
--- Flashlight, and the Kuntilanak / Pocong / Tuyul ghost set) authored for Animora.
+-- Flashlight, the Kuntilanak / Pocong / Tuyul ghost set and the NISKALA everyday set)
+-- authored for Animora.
 -- They are simple,
 -- clean starting points meant to be edited, not final animations.
 --
@@ -620,6 +621,191 @@ local function ghostTemplates(): { Template }
 	}
 end
 
+-- NISKALA set: everyday Idle, Walk, Run and Jump with a quiet unease. The body is a
+-- little guarded (shoulders drawn in, arms close, head slightly low) and every loop
+-- has one short glance over the shoulder, as if something might be behind you.
+
+-- Idle: slow breathing, arms held close against the cold, one look back per loop.
+local function niskalaIdleBody(breath: number): { [string]: JointPose }
+	return {
+		root = { y = -0.05 - 0.03 * breath },
+		waist = { rx = -5 + 2 * breath },
+		kneeR = { rx = -6 },
+		kneeL = { rx = -3 },
+		shoulderR = { rx = 8 + 2 * breath, rz = 2 },
+		shoulderL = { rx = 8 + 2 * breath, rz = 2 },
+		elbowR = { rx = 20 + 4 * breath },
+		elbowL = { rx = 20 + 4 * breath },
+	}
+end
+
+-- Walk contact pose: `side` 1 = right foot forward. Smaller arm swing, slight lean.
+local function niskalaWalkStride(side: number): { [string]: JointPose }
+	local pose = stride(side, 26, 28, 14, 20, -0.04)
+	pose.waist = { rx = -6, ry = -5 * side }
+	pose.shoulderR = { rx = -14 * side, rz = 3 }
+	pose.shoulderL = { rx = 14 * side, rz = 3 }
+	return pose
+end
+
+local function niskalaWalkPassing(side: number): { [string]: JointPose }
+	local pose = passing(side, 42, 24, 0.07, -6)
+	pose.shoulderR = { rx = 0, rz = 3 }
+	pose.shoulderL = { rx = 0, rz = 3 }
+	return pose
+end
+
+-- Run contact pose: forward lean, arms pumping close to the body.
+local function niskalaRunStride(side: number): { [string]: JointPose }
+	local pose = stride(side, 48, 70, 48, 85, -0.1)
+	pose.waist = { rx = -14, ry = -8 * side }
+	pose.shoulderR = { rx = -48 * side, rz = 6 }
+	pose.shoulderL = { rx = 48 * side, rz = 6 }
+	return pose
+end
+
+local function niskalaRunPassing(side: number): { [string]: JointPose }
+	local pose = passing(side, 95, 85, 0.25, -14)
+	pose.shoulderR = { rx = 0, rz = 8 }
+	pose.shoulderL = { rx = 0, rz = 8 }
+	return pose
+end
+
+-- Jump pose: `y` moves the body up or down; the left leg bends a little less.
+local function niskalaJumpPose(
+	y: number,
+	lean: number,
+	hip: number,
+	knee: number,
+	ankle: number,
+	arm: number,
+	armOut: number,
+	elbow: number,
+	headX: number,
+	headY: number
+): { [string]: JointPose }
+	return {
+		root = { y = y },
+		waist = { rx = lean },
+		neck = { rx = headX, ry = headY },
+		hipR = { rx = hip },
+		hipL = { rx = hip * 0.85 },
+		kneeR = { rx = knee },
+		kneeL = { rx = knee * 0.85 },
+		ankleR = { rx = ankle },
+		ankleL = { rx = ankle },
+		shoulderR = { rx = arm, rz = armOut },
+		shoulderL = { rx = arm, rz = armOut },
+		elbowR = { rx = elbow },
+		elbowL = { rx = elbow },
+	}
+end
+
+-- Adds head keys (time, rx, ry) to a key list.
+local function addLooks(keys: { TemplateKey }, looks: { { number } })
+	for _, look in looks do
+		table.insert(keys, ghostKey(look[1], { neck = { rx = look[2], ry = look[3] } }))
+	end
+end
+
+-- Builds a two-cycle stride loop: contact and passing poses every half step.
+local function strideLoop(
+	step: number,
+	contact: (number) -> { [string]: JointPose },
+	pass: (number) -> { [string]: JointPose }
+): { TemplateKey }
+	local keys: { TemplateKey } = {}
+	for index = 0, 8 do
+		local side = if (index // 2) % 2 == 0 then 1 else -1
+		local pose = if index % 2 == 0 then contact(side) else pass(side)
+		table.insert(keys, ghostKey(index * step / 2, pose))
+	end
+	return keys
+end
+
+local function niskalaTemplates(): { Template }
+	local idle: { TemplateKey } = {
+		ghostKey(0, niskalaIdleBody(0)),
+		ghostKey(1.6, niskalaIdleBody(1)),
+		ghostKey(3.2, niskalaIdleBody(0)),
+		ghostKey(4.0, niskalaIdleBody(0.6)),
+		ghostKey(4.8, niskalaIdleBody(0)),
+	}
+	-- Positive ry turns the face to the character's left.
+	addLooks(idle, {
+		{ 0, -6, 0 },
+		{ 1.8, -6, 0 },
+		{ 2.2, -2, 55 }, -- look back over the left shoulder
+		{ 2.9, -3, 48 },
+		{ 3.3, -5, -15 }, -- quick check to the right
+		{ 3.8, -6, 0 },
+		{ 4.8, -6, 0 },
+	})
+
+	local walk = strideLoop(0.6, niskalaWalkStride, niskalaWalkPassing)
+	addLooks(walk, {
+		{ 0, -4, 0 },
+		{ 1.1, -4, 0 },
+		{ 1.4, -2, 30 }, -- short glance to the left
+		{ 1.8, -3, 25 },
+		{ 2.1, -4, 0 },
+		{ 2.4, -4, 0 },
+	})
+
+	local run = strideLoop(0.4, niskalaRunStride, niskalaRunPassing)
+	addLooks(run, {
+		{ 0, 6, 0 },
+		{ 0.8, 6, 0 },
+		{ 0.95, 8, 40 }, -- quick look back
+		{ 1.15, 6, 0 },
+		{ 1.6, 6, 0 },
+	})
+
+	return {
+		{
+			id = "NiskalaIdle",
+			name = "Niskala Idle",
+			looped = true,
+			priority = Enum.AnimationPriority.Idle,
+			keys = idle,
+		},
+		{
+			id = "NiskalaWalk",
+			name = "Niskala Walk",
+			looped = true,
+			priority = Enum.AnimationPriority.Movement,
+			keys = walk,
+		},
+		{
+			id = "NiskalaRun",
+			name = "Niskala Run",
+			looped = true,
+			priority = Enum.AnimationPriority.Movement,
+			keys = run,
+		},
+		{
+			id = "NiskalaJump",
+			name = "Niskala Jump",
+			looped = false,
+			priority = Enum.AnimationPriority.Action,
+			keys = {
+				ghostKey(0, niskalaJumpPose(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+				-- Crouch, arms swung back.
+				ghostKey(0.2, niskalaJumpPose(-0.6, -20, 40, -75, 15, -30, 8, 20, 6, 0), "Quad", "Out"),
+				-- Push off: body stretched, toes pointing down, arms forward for balance.
+				ghostKey(0.4, niskalaJumpPose(1.2, -4, -6, -10, -25, 70, 15, 30, 0, 0), "Quad", "Out"),
+				-- Knees tucked at the top.
+				ghostKey(0.65, niskalaJumpPose(1, -8, 45, -70, -10, 50, 30, 40, -4, 0), "Quad", "In"),
+				-- Heavy landing, eyes on the ground.
+				ghostKey(0.85, niskalaJumpPose(-0.55, -16, 38, -70, 15, 25, 25, 35, -10, 0), "Quad", "Out"),
+				-- Straighten up with a glance to the left.
+				ghostKey(1.05, niskalaJumpPose(-0.15, -6, 12, -22, 5, 8, 8, 18, -4, 30)),
+				ghostKey(1.3, niskalaJumpPose(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+			},
+		},
+	}
+end
+
 local LIST: { Template } = {
 	{
 		id = "Idle",
@@ -927,6 +1113,9 @@ local LIST: { Template } = {
 	flashlightExplore(),
 }
 for _, template in ghostTemplates() do
+	table.insert(LIST, template)
+end
+for _, template in niskalaTemplates() do
 	table.insert(LIST, template)
 end
 
