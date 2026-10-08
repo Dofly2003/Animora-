@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local Model = require(script.Parent.Parent.Core.Model)
 local Interpolate = require(script.Parent.Parent.Core.Interpolate)
 local CameraPath = require(script.Parent.Parent.Core.CameraPath)
+local CameraBake = require(script.Parent.Parent.Core.CameraBake)
 local Commands = require(script.Parent.Parent.Core.Commands)
 local Signal = require(script.Parent.Parent.Core.Signal)
 local Mirror = require(script.Parent.Parent.Core.Mirror)
@@ -291,17 +292,34 @@ function Session.cameraTransform(self: Session, time: number?): CFrame?
 	end)
 end
 
--- The camera's field of view at the current time, or nil when it has no FOV keyframes.
-function Session.cameraFov(self: Session): number?
+-- The camera's field of view at `time` (default: the playhead), or nil when it has no
+-- FOV keyframes.
+function Session.cameraFov(self: Session, time: number?): number?
 	local override = self._override
-	if override and override.name == Model.CAMERA_FOV_TRACK then
+	if time == nil and override and override.name == Model.CAMERA_FOV_TRACK then
 		return Model.fovFrom(override.value)
 	end
 	local track = self.clip and self.clip.tracks[Model.CAMERA_FOV_TRACK]
 	if not track or #track.keyframes == 0 then
 		return nil
 	end
-	return Model.fovFrom(Interpolate.sampleTrack(track, self.time))
+	return Model.fovFrom(Interpolate.sampleTrack(track, time or self.time))
+end
+
+-- Bakes the camera track for the game (see Core/CameraBake), or nil without camera keys.
+-- Covers the same span as the KeyframeSequence export: up to the clip's last keyframe.
+function Session.buildCameraExport(self: Session): CameraBake.Data?
+	local clip = self.clip
+	local track = clip and clip.tracks[Model.CAMERA_TRACK]
+	if not (clip and track and #track.keyframes > 0) then
+		return nil
+	end
+	local rootPart = self.binder and RigBinder.findRootPart(self.binder.joints)
+	return CameraBake.bake(function(time)
+		return self:cameraTransform(time) :: CFrame
+	end, function(time)
+		return self:cameraFov(time) or Model.DEFAULT_FOV
+	end, self:playbackEnd(), clip.fps, clip.looped, if rootPart then rootPart.CFrame else CFrame.identity)
 end
 
 function Session._applyCameraPreview(self: Session)

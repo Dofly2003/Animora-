@@ -9,6 +9,7 @@
 --                                               Animation Editor lists and publishes them
 
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Model = require(script.Parent.Parent.Core.Model)
@@ -17,6 +18,8 @@ local Serialize = require(script.Parent.Parent.Core.Serialize)
 local Storage = {}
 
 Storage.FOLDER_NAME = "AnimoraSaves"
+Storage.CAMERA_FOLDER = "AnimoraCameras" -- ReplicatedStorage folder of exported camera shots
+Storage.CAMERA_PLAYER = "AnimoraCamera" -- ReplicatedStorage module that plays them
 Storage.ANIMATION_EDITOR_FOLDER = "RBX_ANIMSAVES"
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder
@@ -165,6 +168,40 @@ function Storage.loadClips(rig: Model): { Model.Clip }
 		end
 	end
 	return clips
+end
+
+-- Copies the AnimoraCamera player module into ReplicatedStorage, replacing an older copy.
+function Storage.installCameraPlayer(): ModuleScript
+	local template = script.Parent.Parent.Runtime.AnimoraCamera :: ModuleScript
+	local existing = ReplicatedStorage:FindFirstChild(Storage.CAMERA_PLAYER)
+	if existing and existing:IsA("ModuleScript") and existing.Source == template.Source then
+		return existing
+	end
+	if existing then
+		existing:Destroy()
+	end
+	local copy = template:Clone()
+	copy.Name = Storage.CAMERA_PLAYER
+	copy.Parent = ReplicatedStorage
+	return copy
+end
+
+-- Writes an exported camera shot as ReplicatedStorage.AnimoraCameras.<name> (replacing
+-- an older export with that name) and makes sure the player module is there too.
+function Storage.placeCameraExport(name: string, source: string): (ModuleScript, string)
+	local folder = getOrCreateFolder(ReplicatedStorage, Storage.CAMERA_FOLDER)
+	local module = folder:FindFirstChild(name)
+	if not (module and module:IsA("ModuleScript")) then
+		if module then
+			module:Destroy()
+		end
+		module = Instance.new("ModuleScript")
+		module.Name = name
+		module.Parent = folder
+	end
+	(module :: ModuleScript).Source = source
+	Storage.installCameraPlayer()
+	return module :: ModuleScript, string.format("ReplicatedStorage > %s > %s", Storage.CAMERA_FOLDER, name)
 end
 
 -- Puts an exported KeyframeSequence where the Animation Editor finds it

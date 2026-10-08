@@ -71,18 +71,47 @@ Save the place as usual (Ctrl+S). Press Run (F8) or Play to test: the rig goes b
 2. Right-click it → **Save to Roblox**, or open it in Roblox's own Animation Editor and publish from there.
 3. Copy the animation's asset ID and use it in your game (`rbxassetid://<id>`).
 
-## 9. Import
+## 9. Camera (cutscenes)
+
+The **[ Camera ]** and **FOV (zoom)** rows at the top of the timeline animate the camera together with the rig.
+
+1. Move the Studio camera to the shot you want, put the playhead where it should be, and press **Key camera**. The view and its field of view are keyed together.
+2. Type a value (1-120) in the **FOV** box (third toolbar row) and press Enter to key a zoom at the playhead.
+3. Turn on **View camera** to look through the animated camera while scrubbing or playing. Turn it off before framing the next shot.
+4. In the viewport, a purple line shows the camera's path, a small orange camera marks each keyframe (white when selected) and a red dot shows where the camera is at the playhead.
+
+Camera keys ease, move, copy and delete like any other keys. When a key looks at the character, the camera orbits around it between keys instead of cutting a straight line.
+
+**Export** also writes the camera:
+
+- `ReplicatedStorage > AnimoraCameras > <animation name>`: the shot (a ModuleScript).
+- `ReplicatedStorage > AnimoraCamera`: the player module.
+
+Play it from a LocalScript:
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnimoraCamera = require(ReplicatedStorage.AnimoraCamera)
+local shot = require(ReplicatedStorage.AnimoraCameras.ColdOpen)
+
+local playing = AnimoraCamera.play(shot) -- options: origin, speed, restore, onEnded
+playing:Wait() -- the camera goes back to the player when the shot ends
+```
+
+Pass `origin = character.HumanoidRootPart.CFrame` to replay the shot around a character standing somewhere else. Start the character's animation at the same moment to keep both in sync.
+
+## 10. Import
 
 Press **Import**:
 
 - If a KeyframeSequence is selected in the Explorer, it is imported straight away.
 - Otherwise a menu lists the animations saved in the place (`RBX_ANIMSAVES`) and lets you load one by asset ID. Curve animations cannot be imported yet.
 
-## 10. Shortcuts
+## 11. Shortcuts
 
 Animora's commands are Studio plugin actions. Give them keys under **File → Customize Shortcuts** (search for "Animora"): Play / Pause, Next / Previous frame, Next / Previous keyframe, Copy, Paste, Delete keyframes, Mirror, Rotate mode, Move mode. **R** and **T** work in the viewport without setting anything up.
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Problem | Try this |
 | --- | --- |

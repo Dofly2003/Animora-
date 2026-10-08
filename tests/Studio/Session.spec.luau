@@ -6,6 +6,8 @@ local Animora = game:GetService("ReplicatedStorage").Animora
 local Session = require(Animora.Studio.Session)
 local RigBinder = require(Animora.Studio.RigBinder)
 local Model = require(Animora.Core.Model)
+local CameraBake = require(Animora.Core.CameraBake)
+local Storage = require(Animora.Studio.Storage)
 
 local REST_C0 = CFrame.new(1, 0.5, 0)
 
@@ -573,6 +575,30 @@ describe("Session", function()
 		expect(session.clip.tracks[Model.CAMERA_TRACK]).never.toBeNil()
 		expect(session.clip.tracks[Model.CAMERA_FOV_TRACK]).never.toBeNil()
 		sequence:Destroy()
+		session:destroy()
+	end)
+
+	it("exports the camera as a shot module with the AnimoraCamera player", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(session:buildCameraExport()).toBeNil()
+
+		session:setTime(0)
+		session:commitJoint(Model.CAMERA_TRACK, CFrame.new(0, 5, 12))
+		session:setTime(1)
+		session:commitJoint(Model.CAMERA_TRACK, CFrame.new(8, 5, 12))
+		local shot = session:buildCameraExport() :: any
+		expect(#shot.frames).toBe(31) -- 30 FPS from 0 to the last key (1 s)
+		expect(shot.frames[31][1]).toBeCloseTo(8, 3)
+
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local module = Storage.placeCameraExport("AnimoraTestShot", CameraBake.toSource(shot, "AnimoraTestShot"))
+		expect(module.Parent.Name).toBe(Storage.CAMERA_FOLDER)
+		local player = ReplicatedStorage:FindFirstChild(Storage.CAMERA_PLAYER)
+		expect(player).never.toBeNil()
+		module:Destroy()
 		session:destroy()
 	end)
 

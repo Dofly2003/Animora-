@@ -47,6 +47,8 @@ return {
 	["editor.import"] = "Impor",
 	["editor.export.done"] = "Diekspor ke {path}. Klik kanan > Save to Roblox, atau buka di Animation Editor untuk publish.",
 	["editor.export.empty"] = "Belum ada yang bisa diekspor: buat keyframe dulu.",
+	["editor.export.withCamera"] = "Badan diekspor ke {path} dan kamera ke {camera}. Putar kameranya dari LocalScript dengan ReplicatedStorage.AnimoraCamera.",
+	["editor.export.cameraOnly"] = "Kamera diekspor ke {camera}. Putar dari LocalScript dengan ReplicatedStorage.AnimoraCamera.",
 	["editor.import.done"] = "{count} keyframe diimpor dari {name}.",
 	["editor.import.none"] = "{name} tidak punya keyframe untuk sendi rig ini.",
 	["editor.import.select"] = "Pilih KeyframeSequence di Explorer dulu (misalnya di ServerStorage > RBX_ANIMSAVES), lalu tekan Impor.",

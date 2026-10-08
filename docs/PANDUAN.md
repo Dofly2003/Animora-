@@ -71,18 +71,47 @@ Simpan place seperti biasa (Ctrl+S). Saat menekan Run (F8) atau Play untuk menco
 2. Klik kanan → **Save to Roblox**, atau buka di Animation Editor bawaan Roblox dan publish dari sana.
 3. Salin asset ID animasinya dan pakai di game (`rbxassetid://<id>`).
 
-## 9. Impor
+## 9. Kamera (cutscene)
+
+Baris **[ Kamera ]** dan **FOV (zoom)** di bagian atas timeline menganimasikan kamera bersama rig.
+
+1. Atur kamera Studio ke sudut yang diinginkan, letakkan playhead di waktunya, lalu tekan **Kunci kamera**. Posisi dan FOV kamera dikunci bersamaan.
+2. Ketik angka (1-120) di kotak **FOV** (baris ketiga toolbar) lalu tekan Enter untuk mengunci zoom di playhead.
+3. Nyalakan **Lihat kamera** untuk melihat lewat kamera animasi saat scrub atau Play. Matikan dulu sebelum mengatur sudut berikutnya.
+4. Di viewport, garis ungu menunjukkan lintasan kamera, kamera kecil oranye menandai tiap keyframe (putih saat dipilih), dan titik merah menunjukkan posisi kamera di playhead.
+
+Keyframe kamera bisa diberi easing, digeser, disalin, dan dihapus seperti keyframe lain. Kalau kamera menatap karakter, di antara keyframe kamera bergerak mengitari karakter, bukan memotong lurus.
+
+**Export** juga menulis kamera:
+
+- `ReplicatedStorage > AnimoraCameras > <nama animasi>`: data shot (ModuleScript).
+- `ReplicatedStorage > AnimoraCamera`: modul pemutar.
+
+Putar dari LocalScript:
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnimoraCamera = require(ReplicatedStorage.AnimoraCamera)
+local shot = require(ReplicatedStorage.AnimoraCameras.ColdOpen)
+
+local playing = AnimoraCamera.play(shot) -- opsi: origin, speed, restore, onEnded
+playing:Wait() -- kamera kembali ke pemain setelah shot selesai
+```
+
+Isi `origin = character.HumanoidRootPart.CFrame` supaya shot diputar di sekitar karakter yang berdiri di tempat lain. Mainkan animasi karakter di saat yang sama supaya keduanya sinkron.
+
+## 10. Impor
 
 Tekan **Import**:
 
 - Kalau ada KeyframeSequence yang dipilih di Explorer, langsung diimpor.
 - Kalau tidak, muncul menu berisi animasi yang tersimpan di place (`RBX_ANIMSAVES`) dan pilihan memuat lewat asset ID. Animasi jenis curve belum bisa diimpor.
 
-## 10. Shortcut
+## 11. Shortcut
 
 Perintah Animora terdaftar sebagai plugin action Studio. Atur tombolnya di **File → Customize Shortcuts** (cari "Animora"): Play / Pause, frame berikut / sebelumnya, keyframe berikut / sebelumnya, Copy, Paste, Delete keyframes, Mirror, Rotate mode, Move mode. **R** dan **T** di viewport langsung bisa dipakai tanpa diatur.
 
-## 11. Kalau ada masalah
+## 12. Kalau ada masalah
 
 | Masalah | Coba ini |
 | --- | --- |

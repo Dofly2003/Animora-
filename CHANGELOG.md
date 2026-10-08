@@ -4,6 +4,12 @@ All notable changes to Animora are documented here. Versions follow [Semantic Ve
 
 ## [Unreleased]
 
+### Added
+- Camera track for cutscenes: Key camera stores the viewport camera and its FOV at the playhead, View camera looks through it while scrubbing and playing, and the FOV box keys zooms. Camera keys orbit around the character when they look at it.
+- The camera path, keyframe cameras and playhead position are drawn in the viewport.
+- Export also writes the camera as a ModuleScript shot (ReplicatedStorage > AnimoraCameras) and installs the AnimoraCamera player module to play it in game.
+- Tests run from the Command Bar (scripts/RunTestsCommandBar.luau).
+
 ## [0.1.0] - 2026-10-08
 
 First public beta.

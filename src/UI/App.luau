@@ -23,6 +23,7 @@ local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
 local RunGuard = require(script.Parent.Parent.Studio.RunGuard)
 local RigType = require(script.Parent.Parent.Core.RigType)
+local CameraBake = require(script.Parent.Parent.Core.CameraBake)
 local Model = require(script.Parent.Parent.Core.Model)
 local Timeline = require(script.Parent.Timeline)
 local ImportMenu = require(script.Parent.ImportMenu)
@@ -335,21 +336,36 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		return if clip then string.format("%.2f", clip.length) else ""
 	end)
 
+	-- Exports the body as a KeyframeSequence and, when the clip has camera keys, the camera
+	-- as a ModuleScript shot plus the AnimoraCamera player in ReplicatedStorage.
 	local function exportClip()
 		local rig = session.rig
+		local clip = session.clip
 		local sequence = session:buildExport()
-		if not (rig and sequence) then
+		local camera = session:buildCameraExport()
+		if not (rig and clip and (sequence or camera)) then
 			notice:set({ key = "editor.export.empty" })
 			return
 		end
-		local exported = sequence :: KeyframeSequence
-		local path = ""
+		local path, shotPath = "", ""
+		local cameraModule: ModuleScript? = nil
 		-- Its own waypoint name: undoing an export must not undo a clip edit.
 		StudioUndo.recordOther("Animora export", function()
-			path = Storage.placeExport(rig, exported)
+			if sequence then
+				path = Storage.placeExport(rig, sequence)
+			end
+			if camera then
+				cameraModule, shotPath = Storage.placeCameraExport(clip.name, CameraBake.toSource(camera, clip.name))
+			end
 		end)
-		Selection:Set({ exported })
-		notice:set({ key = "editor.export.done", args = { path = path } })
+		Selection:Set({ if sequence then sequence else cameraModule :: Instance })
+		if sequence and camera then
+			notice:set({ key = "editor.export.withCamera", args = { path = path, camera = shotPath } })
+		elseif camera then
+			notice:set({ key = "editor.export.cameraOnly", args = { camera = shotPath } })
+		else
+			notice:set({ key = "editor.export.done", args = { path = path } })
+		end
 	end
 
 	local function importSequence(sequence: KeyframeSequence, sourceName: string)
