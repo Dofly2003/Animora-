@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 local JestGlobals = require(game:GetService("ReplicatedStorage").DevPackages.JestGlobals)
 local describe, it, expect, afterEach = JestGlobals.describe, JestGlobals.it, JestGlobals.expect, JestGlobals.afterEach
 
@@ -310,6 +311,9 @@ describe("Session", function()
 		local session = Session.new()
 		session:setRig(rig)
 		session:commitJoint("Arm", CFrame.Angles(0, 0, math.rad(90)))
+		-- A kinematic assembly moves its parts on the engine's next step, not instantly.
+		RunService.Heartbeat:Wait()
+		RunService.Heartbeat:Wait()
 		expect(arm.CFrame.Position:FuzzyEq(Vector3.new(1.5, 10.5, 0), 1e-3)).toBe(true)
 		expect(hand.CFrame.Position:FuzzyEq(Vector3.new(2.5, 10.5, 0), 1e-3)).toBe(true)
 
