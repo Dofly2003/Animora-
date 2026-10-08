@@ -18,7 +18,7 @@ Free, open-source animation editor plugin for Roblox Studio — a community alte
 
 ### Planned
 
-- Before the beta: plugin icon, user guide
+- Before the beta: user guide
 - v1: IK, curve editor, camera and object animation, multiple rigs, onion skin, pose library
 - v2: markers with a Luau code generator, animation debugger
 

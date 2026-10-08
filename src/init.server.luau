@@ -20,7 +20,7 @@ Localization.setLanguage(pluginSettings:get("language"))
 
 -- Toolbar icon: assets/icon/icon-64.png uploaded to Roblox (an Image asset ID, not a
 -- Decal ID). Regenerate the PNGs with `python scripts/make_icon.py`.
-local ICON = "" -- e.g. "rbxassetid://1234567890"
+local ICON = "rbxassetid://108366725262430"
 
 local toolbar = plugin:CreateToolbar("Animora")
 local toggleButton = toolbar:CreateButton("Animora", Localization.t("toolbar.open.tooltip"), ICON)
