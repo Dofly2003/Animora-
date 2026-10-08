@@ -48,6 +48,7 @@ return {
 	["editor.export.done"] = "Diekspor ke {path}. Klik kanan > Save to Roblox, atau buka di Animation Editor untuk publish.",
 	["editor.export.empty"] = "Belum ada yang bisa diekspor: buat keyframe dulu.",
 	["editor.export.withCamera"] = "Badan diekspor ke {path} dan kamera ke {camera}. Putar kameranya dari LocalScript dengan ReplicatedStorage.AnimoraCamera.",
+	["editor.export.cameraBlocked"] = "Kamera tidak bisa ditulis: izinkan Script Injection untuk Animora (Plugins > Manage Plugins > Animora > Script Injection), lalu tekan Export lagi.",
 	["editor.export.cameraOnly"] = "Kamera diekspor ke {camera}. Putar dari LocalScript dengan ReplicatedStorage.AnimoraCamera.",
 	["editor.import.done"] = "{count} keyframe diimpor dari {name}.",
 	["editor.import.none"] = "{name} tidak punya keyframe untuk sendi rig ini.",

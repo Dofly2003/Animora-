@@ -349,15 +349,31 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		local path, shotPath = "", ""
 		local cameraModule: ModuleScript? = nil
+		local cameraError: string? = nil
 		-- Its own waypoint name: undoing an export must not undo a clip edit.
 		StudioUndo.recordOther("Animora export", function()
 			if sequence then
 				path = Storage.placeExport(rig, sequence)
 			end
 			if camera then
-				cameraModule, shotPath = Storage.placeCameraExport(clip.name, CameraBake.toSource(camera, clip.name))
+				-- Writing a script's Source needs the plugin's Script Injection permission.
+				local ok, result = pcall(function()
+					cameraModule, shotPath =
+						Storage.placeCameraExport(clip.name, CameraBake.toSource(camera, clip.name))
+				end)
+				if not ok then
+					cameraError = tostring(result)
+					warn("[Animora] Camera export failed:", result)
+				end
 			end
 		end)
+		if cameraError then
+			notice:set({ key = "editor.export.cameraBlocked", args = { path = path } })
+			if sequence then
+				Selection:Set({ sequence })
+			end
+			return
+		end
 		Selection:Set({ if sequence then sequence else cameraModule :: Instance })
 		if sequence and camera then
 			notice:set({ key = "editor.export.withCamera", args = { path = path, camera = shotPath } })

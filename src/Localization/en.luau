@@ -48,6 +48,7 @@ return {
 	["editor.export.done"] = "Exported to {path}. Right-click it > Save to Roblox, or open it in the Animation Editor to publish.",
 	["editor.export.empty"] = "Nothing to export yet: add some keyframes first.",
 	["editor.export.withCamera"] = "Exported the body to {path} and the camera to {camera}. Play the camera from a LocalScript with ReplicatedStorage.AnimoraCamera.",
+	["editor.export.cameraBlocked"] = "The camera could not be written: allow Script Injection for Animora (Plugins > Manage Plugins > Animora > Script Injection), then press Export again.",
 	["editor.export.cameraOnly"] = "Exported the camera to {camera}. Play it from a LocalScript with ReplicatedStorage.AnimoraCamera.",
 	["editor.import.done"] = "Imported {count} keyframes from {name}.",
 	["editor.import.none"] = "{name} has no keyframes for this rig's joints.",
