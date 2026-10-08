@@ -282,7 +282,15 @@ function Session._applyCameraPreview(self: Session)
 	local value = self:cameraTransform()
 	local camera = workspace.CurrentCamera
 	if value and camera then
+		-- Studio's editor camera turns back towards its Focus point, so move the Focus
+		-- along: put it on the view line, at the rig when the camera looks at it.
+		local rootPart = self.binder and RigBinder.findRootPart(self.binder.joints)
+		local distance = if rootPart then (rootPart.Position - value.Position):Dot(value.LookVector) else 0
+		if distance < 1 then
+			distance = 10
+		end
 		camera.CFrame = value
+		camera.Focus = CFrame.new(value.Position + value.LookVector * distance)
 	end
 end
 
