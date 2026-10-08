@@ -196,9 +196,10 @@ function Timeline.mount(parent: GuiObject, session: Session.Session): Handle
 			button.TextSize = Theme.TEXT_SIZE
 			button.TextXAlignment = Enum.TextXAlignment.Left
 			button.TextColor3 = Theme.color(Enum.StudioStyleGuideColor.MainText)
-			local isCamera = entry.name == Model.CAMERA_TRACK
-			button.Text = if isCamera
+			local isCamera = Model.isCameraTrack(entry.name)
+			button.Text = if entry.name == Model.CAMERA_TRACK
 				then "  [ " .. Localization.t("camera.track") .. " ]"
+				elseif entry.name == Model.CAMERA_FOV_TRACK then "      " .. Localization.t("camera.fov")
 				else string.rep(" ", 2) .. string.rep("  ", entry.depth) .. entry.name
 			if isCamera then
 				button.FontFace = Font.new(Theme.FONT.Family, Enum.FontWeight.Bold)

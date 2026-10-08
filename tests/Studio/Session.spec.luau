@@ -287,7 +287,7 @@ describe("Session", function()
 		expect(RigBinder.isRig(rig)).toBe(true)
 		local session = Session.new()
 		session:setRig(rig)
-		expect(#session.jointOrder).toBe(3) -- the camera row plus two joints
+		expect(#session.jointOrder).toBe(4) -- camera and FOV rows plus two joints
 
 		-- Swing the arm 90 degrees about Z around the shoulder pivot.
 		session:commitJoint("Arm", CFrame.Angles(0, 0, math.rad(90)))
@@ -512,6 +512,45 @@ describe("Session", function()
 		session:destroy()
 	end)
 
+	it("keys the camera FOV, eases it and shows it while looking through", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(session.jointOrder[2].name).toBe(Model.CAMERA_FOV_TRACK)
+
+		local camera = workspace.CurrentCamera
+		local originalFov = camera.FieldOfView
+		camera.FieldOfView = 70
+		session:setTime(0)
+		session:keyCameraFromView() -- keys the view and its FOV in one step
+		expect(session:cameraFov()).toBeCloseTo(70, 3)
+
+		session:setTime(1)
+		expect(session:setCameraFov(30)).toBe(30)
+		expect(session:setCameraFov(500)).toBe(120) -- clamped
+		session:setCameraFov(30)
+
+		session:setTime(0.5)
+		expect(session:cameraFov()).toBeCloseTo(50, 3)
+
+		camera.FieldOfView = 70
+		session:setCameraPreview(true)
+		session:setTime(1)
+		expect(camera.FieldOfView).toBeCloseTo(30, 3)
+		session:setCameraPreview(false)
+		expect(camera.FieldOfView).toBeCloseTo(70, 3) -- restored
+
+		-- Keying the view keys its FOV in the same undo step.
+		session:setTime(2)
+		session:keyCameraFromView()
+		session:undo()
+		expect(#session.clip.tracks[Model.CAMERA_TRACK].keyframes).toBe(1)
+		expect(#session.clip.tracks[Model.CAMERA_FOV_TRACK].keyframes).toBe(2)
+		camera.FieldOfView = originalFov
+		session:destroy()
+	end)
+
 	it("leaves the camera out of exports and keeps it on import", function()
 		local rig = makeRig()
 		table.insert(rigs, rig)
@@ -525,12 +564,14 @@ describe("Session", function()
 		local sequence = session:buildExport() :: KeyframeSequence
 		for _, keyframe in sequence:GetKeyframes() do
 			for _, pose in keyframe:GetDescendants() do
-				expect(pose.Name).never.toBe(Model.CAMERA_TRACK)
+				expect(Model.isCameraTrack(pose.Name)).toBe(false)
 			end
 		end
 
+		session:setCameraFov(40)
 		session:importSequence(sequence)
 		expect(session.clip.tracks[Model.CAMERA_TRACK]).never.toBeNil()
+		expect(session.clip.tracks[Model.CAMERA_FOV_TRACK]).never.toBeNil()
 		sequence:Destroy()
 		session:destroy()
 	end)

@@ -45,6 +45,23 @@ local Model = {}
 -- Track name of the camera. Its keyframes hold the camera's world CFrame instead of a
 -- joint transform; "@" cannot start a body part name in practice, so it never clashes.
 Model.CAMERA_TRACK = "@Camera"
+-- Track name of the camera's field of view. Keyframes store the FOV in degrees as the
+-- X position of their CFrame, so easing, selection and undo work like any other track.
+Model.CAMERA_FOV_TRACK = "@CameraFOV"
+Model.DEFAULT_FOV = 70
+
+-- True for the camera tracks (they belong to no joint of the rig).
+function Model.isCameraTrack(name: string): boolean
+	return name == Model.CAMERA_TRACK or name == Model.CAMERA_FOV_TRACK
+end
+
+function Model.fovValue(fov: number): CFrame
+	return CFrame.new(fov, 0, 0)
+end
+
+function Model.fovFrom(value: CFrame): number
+	return value.X
+end
 
 function Model.newClip(name: string, fps: number?): Clip
 	return {

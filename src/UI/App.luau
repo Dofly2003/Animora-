@@ -316,6 +316,17 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		return Localization.t("editor.priority", { priority = if clip then clip.priority.Name else "-" })
 	end)
 
+	-- FOV shown in the toolbar: the keyed FOV at the playhead, else the Studio camera's.
+	local fovText = scope:Computed(function(use)
+		use(sessionTick)
+		local fov = session:cameraFov()
+		if not fov then
+			local camera = workspace.CurrentCamera
+			fov = if camera then camera.FieldOfView else Model.DEFAULT_FOV
+		end
+		return string.format("%d", math.round(fov :: number))
+	end)
+
 	local lengthText = scope:Computed(function(use)
 		use(sessionTick)
 		local clip = session.clip
@@ -494,6 +505,34 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		lengthBox.Text = if clip then string.format("%.2f", clip.length) else ""
 	end))
 
+	local fovBox = scope:New("TextBox")({
+		LayoutOrder = 8,
+		Size = UDim2.fromOffset(44, 24),
+		FontFace = Theme.FONT,
+		TextSize = Theme.TEXT_SIZE,
+		ClearTextOnFocus = false,
+		Text = fovText,
+		TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
+		BackgroundColor3 = color(Enum.StudioStyleGuideColor.InputFieldBackground),
+		BorderColor3 = color(Enum.StudioStyleGuideColor.InputFieldBorder),
+	}) :: TextBox
+	track(fovBox.FocusLost:Connect(function(enterPressed: boolean)
+		local fov = tonumber(fovBox.Text)
+		if fov and enterPressed then
+			local applied = session:setCameraFov(fov)
+			if applied then
+				notice:set({
+					key = "camera.fovSet",
+					args = {
+						fov = string.format("%d", math.round(applied)),
+						time = string.format("%.2f", session.time),
+					},
+				})
+			end
+		end
+		fovBox.Text = Fusion.peek(fovText)
+	end))
+
 	-- Layout --------------------------------------------------------------------
 	local timelineHost = scope:New("Frame")({
 		Name = "TimelineHost",
@@ -510,7 +549,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	end
 
 	-- Width of the edit row's buttons; the status message fills the rest of that row.
-	local EDIT_GROUP_WIDTH = 470
+	local EDIT_GROUP_WIDTH = 560
 
 	scope:New("Frame")({
 		Name = "AnimoraApp",
@@ -737,6 +776,12 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 									togglePanel(easingMenu, animationsMenu)
 								end,
 							}),
+							divider(7),
+							label(8, 30, text("camera.fovLabel")),
+							(function()
+								fovBox.LayoutOrder = 9
+								return fovBox
+							end)(),
 						},
 						nil,
 						scope:New("TextLabel")({

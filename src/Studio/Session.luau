@@ -84,6 +84,8 @@ export type Session = typeof(setmetatable(
 		gizmoMode: GizmoMode,
 		-- When true, the Studio camera follows the camera track while scrubbing / playing.
 		cameraPreview: boolean,
+		-- The Studio camera's FOV before "look through the camera" changed it.
+		_fovBeforePreview: number?,
 		selectedKeys: { KeyRef },
 		playing: boolean,
 		changed: Signal.Signal,
@@ -110,6 +112,7 @@ function Session.new(): Session
 		selectedJoint = nil,
 		gizmoMode = "rotate",
 		cameraPreview = false,
+		_fovBeforePreview = nil,
 		selectedKeys = {},
 		playing = false,
 		changed = Signal.new(),
@@ -164,7 +167,7 @@ function Session.setRig(self: Session, rig: Model?)
 		end
 		self.binder = binder
 		-- The camera track is listed first, above the rig's joints.
-		self.jointOrder = { { name = Model.CAMERA_TRACK, depth = 0 } }
+		self.jointOrder = { { name = Model.CAMERA_TRACK, depth = 0 }, { name = Model.CAMERA_FOV_TRACK, depth = 1 } }
 		for _, entry in binder:jointOrder() do
 			table.insert(self.jointOrder, entry)
 		end
@@ -257,6 +260,18 @@ end
 
 -- Camera ---------------------------------------------------------------------------------
 
+-- Sets a keyframe at `time`, keeping the easing of a keyframe already there.
+local function setKeyKeepingEasing(clip: Model.Clip, trackName: string, time: number, value: CFrame)
+	local track = Model.getOrCreateTrack(clip, trackName)
+	local style: Model.EasingStyle, direction: Model.EasingDirection = "Linear", "In"
+	for _, keyframe in track.keyframes do
+		if math.abs(keyframe.time - time) < 1e-6 then
+			style, direction = keyframe.easingStyle, keyframe.easingDirection
+		end
+	end
+	Model.setKeyframe(track, Model.newKeyframe(time, value, style, direction))
+end
+
 -- The camera track's CFrame at the current time, or nil when it has no keyframes.
 function Session.cameraTransform(self: Session): CFrame?
 	local override = self._override
@@ -275,9 +290,27 @@ function Session.cameraTransform(self: Session): CFrame?
 	end)
 end
 
+-- The camera's field of view at the current time, or nil when it has no FOV keyframes.
+function Session.cameraFov(self: Session): number?
+	local override = self._override
+	if override and override.name == Model.CAMERA_FOV_TRACK then
+		return Model.fovFrom(override.value)
+	end
+	local track = self.clip and self.clip.tracks[Model.CAMERA_FOV_TRACK]
+	if not track or #track.keyframes == 0 then
+		return nil
+	end
+	return Model.fovFrom(Interpolate.sampleTrack(track, self.time))
+end
+
 function Session._applyCameraPreview(self: Session)
 	if not self.cameraPreview then
 		return
+	end
+	local fov = self:cameraFov()
+	local studioCamera = workspace.CurrentCamera
+	if fov and studioCamera then
+		studioCamera.FieldOfView = math.clamp(fov, 1, 120)
 	end
 	local value = self:cameraTransform()
 	local camera = workspace.CurrentCamera
@@ -300,9 +333,32 @@ function Session.keyCameraFromView(self: Session): boolean
 	if not (self.clip and camera) then
 		return false
 	end
-	self:commitJoint(Model.CAMERA_TRACK, camera.CFrame)
+	local view, fov = camera.CFrame, camera.FieldOfView
+	local time = self.time
+	self:_edit("Key camera", function(clip)
+		setKeyKeepingEasing(clip, Model.CAMERA_TRACK, time, view)
+		setKeyKeepingEasing(clip, Model.CAMERA_FOV_TRACK, time, Model.fovValue(fov))
+	end)
 	self:selectJoint(Model.CAMERA_TRACK)
 	return true
+end
+
+-- Keys the camera's field of view at the playhead (and shows it in the viewport).
+function Session.setCameraFov(self: Session, fov: number): number?
+	if not self.clip then
+		return nil
+	end
+	fov = math.clamp(fov, 1, 120)
+	local time = self.time
+	self:_edit("Set camera FOV", function(clip)
+		setKeyKeepingEasing(clip, Model.CAMERA_FOV_TRACK, time, Model.fovValue(fov))
+	end)
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.FieldOfView = fov
+	end
+	self:selectJoint(Model.CAMERA_FOV_TRACK)
+	return fov
 end
 
 -- Turns "look through the camera" on or off.
@@ -311,6 +367,13 @@ function Session.setCameraPreview(self: Session, on: boolean)
 		return
 	end
 	self.cameraPreview = on
+	local camera = workspace.CurrentCamera
+	if on and camera then
+		self._fovBeforePreview = camera.FieldOfView
+	elseif not on and camera and self._fovBeforePreview then
+		camera.FieldOfView = self._fovBeforePreview
+		self._fovBeforePreview = nil
+	end
 	self:_applyCameraPreview()
 	self.changed:Fire("cameraPreview")
 end
@@ -326,7 +389,7 @@ function Session.setTime(self: Session, time: number)
 end
 
 function Session.selectJoint(self: Session, jointName: string?)
-	local isCamera = jointName == Model.CAMERA_TRACK and self.binder ~= nil
+	local isCamera = jointName ~= nil and Model.isCameraTrack(jointName) and self.binder ~= nil
 	if jointName and not isCamera and not (self.binder and self.binder.joints[jointName]) then
 		jointName = nil
 	end
@@ -694,7 +757,7 @@ function Session.copy(self: Session): number
 		end
 	else
 		for name in clip.tracks do
-			if name ~= Model.CAMERA_TRACK then
+			if not Model.isCameraTrack(name) then
 				local keyframe = Model.newKeyframe(self.time, self:getJointTransform(name))
 				table.insert(items, { joint = name, offset = 0, keyframe = keyframe })
 			end
@@ -716,7 +779,7 @@ function Session.paste(self: Session): number
 		local selection = {}
 		for _, item in clipboard do
 			local time = Model.snapToFrame(clip, startTime + item.offset)
-			local known = binder.joints[item.joint] ~= nil or item.joint == Model.CAMERA_TRACK
+			local known = binder.joints[item.joint] ~= nil or Model.isCameraTrack(item.joint)
 			if known and time <= clip.length + TIME_EPSILON then
 				local keyframe = table.clone(item.keyframe)
 				keyframe.time = time
@@ -926,9 +989,10 @@ function Session.importSequence(self: Session, sequence: KeyframeSequence): numb
 		return 0
 	end
 	self:_edit("Import animation", function(clip)
-		local camera = clip.tracks[Model.CAMERA_TRACK]
+		local camera, fov = clip.tracks[Model.CAMERA_TRACK], clip.tracks[Model.CAMERA_FOV_TRACK]
 		table.clear(clip.tracks)
 		clip.tracks[Model.CAMERA_TRACK] = camera
+		clip.tracks[Model.CAMERA_FOV_TRACK] = fov
 		for name, keyframes in result.tracks do
 			clip.tracks[name] = { jointName = name, keyframes = keyframes }
 		end
@@ -953,6 +1017,7 @@ function Session.buildExport(self: Session): KeyframeSequence?
 	-- The camera is not part of a KeyframeSequence; it is exported separately.
 	exportClip.tracks = table.clone(clip.tracks)
 	exportClip.tracks[Model.CAMERA_TRACK] = nil
+	exportClip.tracks[Model.CAMERA_FOV_TRACK] = nil
 	if next(exportClip.tracks) == nil then
 		return nil
 	end
