@@ -19,8 +19,10 @@ Requested features that are not scheduled yet. Newest first.
 | --- | --- | --- |
 | 2026-09-29 | Camera animation (cutscenes) | Planned for v1; asked for by the project owner, parked until the beta ships |
 
-## Status (2026-09-29)
+## Status (2026-10-08)
 
-Done: phase 0 spikes; timeline, rotate gizmo with auto-key, keyframe editing (select, move, delete, copy/paste, mirror), frame stepping and FPS, per-keyframe easing, Studio Ctrl+Z/Ctrl+Y, bindable shortcuts, R6 / R15 / AnimationConstraint avatars, autosave, several animations per rig, export/import (place and asset ID), starter templates.
+Phase 2 (MVP core) gate passed: many clips have been made end to end and play in a real game. Now in phase 3 (MVP beta).
+
+Done: phase 0 spikes; timeline, rotate gizmo with auto-key, keyframe editing (select, move, delete, copy/paste, mirror), frame stepping and FPS, per-keyframe easing, Studio Ctrl+Z/Ctrl+Y, bindable shortcuts, R6 / R15 / AnimationConstraint avatars, autosave, several animations per rig, export/import (place and asset ID), 20 starter templates (basic, Scared, Flashlight, ghost and NISKALA sets) in a scrollable list.
 
 Before beta: run the test place, move gizmo for the root joint, toolbar layout, remove spike tools, rig-type label, plugin icon, user guide, v0.1.0 release.
