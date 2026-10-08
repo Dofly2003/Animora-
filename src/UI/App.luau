@@ -22,6 +22,7 @@ local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
 local RunGuard = require(script.Parent.Parent.Studio.RunGuard)
 local RigType = require(script.Parent.Parent.Core.RigType)
+local Model = require(script.Parent.Parent.Core.Model)
 local Timeline = require(script.Parent.Timeline)
 local ImportMenu = require(script.Parent.ImportMenu)
 local EasingMenu = require(script.Parent.EasingMenu)
@@ -276,7 +277,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		return Localization.t("editor.status.rig", {
 			rig = rig.Name,
 			type = rigTypeText(),
-			joint = session.selectedJoint or Localization.t("editor.status.noJoint"),
+			joint = if session.selectedJoint == Model.CAMERA_TRACK
+				then Localization.t("camera.track")
+				else session.selectedJoint or Localization.t("editor.status.noJoint"),
 		})
 	end)
 
@@ -625,7 +628,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 								session:jumpToKey(1)
 							end,
 						}),
-						label(6, 170, timeText),
+						label(6, 140, timeText),
 						divider(7),
 						button({
 							order = 8,
@@ -660,6 +663,32 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							selected = modeSelected("move"),
 							onClick = function()
 								session:setGizmoMode("move")
+							end,
+						}),
+						divider(13),
+						button({
+							order = 14,
+							width = 100,
+							text = text("camera.key"),
+							onClick = function()
+								if session:keyCameraFromView() then
+									notice:set({
+										key = "camera.keyed",
+										args = { time = string.format("%.2f", session.time) },
+									})
+								end
+							end,
+						}),
+						button({
+							order = 15,
+							width = 100,
+							text = text("camera.view"),
+							selected = scope:Computed(function(use)
+								use(sessionTick)
+								return session.cameraPreview
+							end),
+							onClick = function()
+								session:setCameraPreview(not session.cameraPreview)
 							end,
 						}),
 					}),

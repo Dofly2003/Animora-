@@ -81,6 +81,8 @@ export type Session = typeof(setmetatable(
 		selectedJoint: string?,
 		-- Which viewport handles to show: rotate rings, or move arrows (root joint only).
 		gizmoMode: GizmoMode,
+		-- When true, the Studio camera follows the camera track while scrubbing / playing.
+		cameraPreview: boolean,
 		selectedKeys: { KeyRef },
 		playing: boolean,
 		changed: Signal.Signal,
@@ -106,6 +108,7 @@ function Session.new(): Session
 		time = 0,
 		selectedJoint = nil,
 		gizmoMode = "rotate",
+		cameraPreview = false,
 		selectedKeys = {},
 		playing = false,
 		changed = Signal.new(),
@@ -159,7 +162,11 @@ function Session.setRig(self: Session, rig: Model?)
 			self._rigStates[rig] = state
 		end
 		self.binder = binder
-		self.jointOrder = binder:jointOrder()
+		-- The camera track is listed first, above the rig's joints.
+		self.jointOrder = { { name = Model.CAMERA_TRACK, depth = 0 } }
+		for _, entry in binder:jointOrder() do
+			table.insert(self.jointOrder, entry)
+		end
 		self.clips = state.clips
 		self.clip = state.active
 		self._preview = Preview.new(binder, "C0")
@@ -244,6 +251,54 @@ function Session.refreshPose(self: Session)
 		pose[entry.name] = self:getJointTransform(entry.name)
 	end
 	preview:showPose(pose)
+	self:_applyCameraPreview()
+end
+
+-- Camera ---------------------------------------------------------------------------------
+
+-- The camera track's CFrame at the current time, or nil when it has no keyframes.
+function Session.cameraTransform(self: Session): CFrame?
+	local override = self._override
+	if override and override.name == Model.CAMERA_TRACK then
+		return override.value
+	end
+	local track = self.clip and self.clip.tracks[Model.CAMERA_TRACK]
+	if not track or #track.keyframes == 0 then
+		return nil
+	end
+	return Interpolate.sampleTrack(track, self.time)
+end
+
+function Session._applyCameraPreview(self: Session)
+	if not self.cameraPreview then
+		return
+	end
+	local value = self:cameraTransform()
+	local camera = workspace.CurrentCamera
+	if value and camera then
+		camera.CFrame = value
+	end
+end
+
+-- Stores the Studio viewport's camera as a camera keyframe at the playhead. Undoable.
+function Session.keyCameraFromView(self: Session): boolean
+	local camera = workspace.CurrentCamera
+	if not (self.clip and camera) then
+		return false
+	end
+	self:commitJoint(Model.CAMERA_TRACK, camera.CFrame)
+	self:selectJoint(Model.CAMERA_TRACK)
+	return true
+end
+
+-- Turns "look through the camera" on or off.
+function Session.setCameraPreview(self: Session, on: boolean)
+	if on == self.cameraPreview then
+		return
+	end
+	self.cameraPreview = on
+	self:_applyCameraPreview()
+	self.changed:Fire("cameraPreview")
 end
 
 function Session.setTime(self: Session, time: number)
@@ -257,7 +312,8 @@ function Session.setTime(self: Session, time: number)
 end
 
 function Session.selectJoint(self: Session, jointName: string?)
-	if jointName and not (self.binder and self.binder.joints[jointName]) then
+	local isCamera = jointName == Model.CAMERA_TRACK and self.binder ~= nil
+	if jointName and not isCamera and not (self.binder and self.binder.joints[jointName]) then
 		jointName = nil
 	end
 	if jointName ~= self.selectedJoint then
@@ -624,8 +680,10 @@ function Session.copy(self: Session): number
 		end
 	else
 		for name in clip.tracks do
-			local keyframe = Model.newKeyframe(self.time, self:getJointTransform(name))
-			table.insert(items, { joint = name, offset = 0, keyframe = keyframe })
+			if name ~= Model.CAMERA_TRACK then
+				local keyframe = Model.newKeyframe(self.time, self:getJointTransform(name))
+				table.insert(items, { joint = name, offset = 0, keyframe = keyframe })
+			end
 		end
 	end
 	clipboard = items
@@ -644,7 +702,8 @@ function Session.paste(self: Session): number
 		local selection = {}
 		for _, item in clipboard do
 			local time = Model.snapToFrame(clip, startTime + item.offset)
-			if binder.joints[item.joint] and time <= clip.length + TIME_EPSILON then
+			local known = binder.joints[item.joint] ~= nil or item.joint == Model.CAMERA_TRACK
+			if known and time <= clip.length + TIME_EPSILON then
 				local keyframe = table.clone(item.keyframe)
 				keyframe.time = time
 				Model.setKeyframe(Model.getOrCreateTrack(clip, item.joint), keyframe)
@@ -853,7 +912,9 @@ function Session.importSequence(self: Session, sequence: KeyframeSequence): numb
 		return 0
 	end
 	self:_edit("Import animation", function(clip)
+		local camera = clip.tracks[Model.CAMERA_TRACK]
 		table.clear(clip.tracks)
+		clip.tracks[Model.CAMERA_TRACK] = camera
 		for name, keyframes in result.tracks do
 			clip.tracks[name] = { jointName = name, keyframes = keyframes }
 		end
@@ -871,10 +932,16 @@ end
 function Session.buildExport(self: Session): KeyframeSequence?
 	local clip = self.clip
 	local binder = self.binder
-	if not (clip and binder) or next(clip.tracks) == nil then
+	if not (clip and binder) then
 		return nil
 	end
 	local exportClip = table.clone(clip)
+	-- The camera is not part of a KeyframeSequence; it is exported separately.
+	exportClip.tracks = table.clone(clip.tracks)
+	exportClip.tracks[Model.CAMERA_TRACK] = nil
+	if next(exportClip.tracks) == nil then
+		return nil
+	end
 	exportClip.length = self:playbackEnd()
 	return IO.exportKeyframeSequence(Bake.bakeClip(exportClip), binder.joints)
 end

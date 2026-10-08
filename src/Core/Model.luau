@@ -42,6 +42,10 @@ export type Clip = {
 
 local Model = {}
 
+-- Track name of the camera. Its keyframes hold the camera's world CFrame instead of a
+-- joint transform; "@" cannot start a body part name in practice, so it never clashes.
+Model.CAMERA_TRACK = "@Camera"
+
 function Model.newClip(name: string, fps: number?): Clip
 	return {
 		name = name,

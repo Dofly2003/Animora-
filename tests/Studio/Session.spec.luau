@@ -287,7 +287,7 @@ describe("Session", function()
 		expect(RigBinder.isRig(rig)).toBe(true)
 		local session = Session.new()
 		session:setRig(rig)
-		expect(#session.jointOrder).toBe(2)
+		expect(#session.jointOrder).toBe(3) -- the camera row plus two joints
 
 		-- Swing the arm 90 degrees about Z around the shoulder pivot.
 		session:commitJoint("Arm", CFrame.Angles(0, 0, math.rad(90)))
@@ -474,6 +474,65 @@ describe("Session", function()
 		source:destroy()
 		target:destroy()
 		sequence:Destroy()
+	end)
+
+	it("keys the camera from the view and samples it between keyframes", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		expect(session.jointOrder[1].name).toBe(Model.CAMERA_TRACK)
+		expect(session:cameraTransform()).toBeNil()
+
+		local camera = workspace.CurrentCamera
+		local original = camera.CFrame
+		camera.CFrame = CFrame.new(0, 5, 10)
+		session:setTime(0)
+		expect(session:keyCameraFromView()).toBe(true)
+		expect(session.selectedJoint).toBe(Model.CAMERA_TRACK)
+		camera.CFrame = CFrame.new(10, 5, 10)
+		session:setTime(1)
+		session:keyCameraFromView()
+
+		session:setTime(0.5)
+		local halfway = session:cameraTransform() :: CFrame
+		expect((halfway.Position - Vector3.new(5, 5, 10)).Magnitude < 1e-3).toBe(true)
+
+		-- Looking through the camera moves the Studio camera while scrubbing.
+		camera.CFrame = original
+		session:setCameraPreview(true)
+		session:setTime(1)
+		expect((camera.CFrame.Position - Vector3.new(10, 5, 10)).Magnitude < 1e-3).toBe(true)
+		session:setCameraPreview(false)
+		camera.CFrame = original
+
+		-- Undo removes the last camera keyframe.
+		session:undo()
+		expect(#session.clip.tracks[Model.CAMERA_TRACK].keyframes).toBe(1)
+		session:destroy()
+	end)
+
+	it("leaves the camera out of exports and keeps it on import", function()
+		local rig = makeRig()
+		table.insert(rigs, rig)
+		local session = Session.new()
+		session:setRig(rig)
+		session:setTime(0)
+		session:commitJoint(Model.CAMERA_TRACK, CFrame.new(0, 5, 10))
+		expect(session:buildExport()).toBeNil() -- only a camera: nothing to export
+
+		session:commitJoint("Arm", CFrame.Angles(0, 0, 1))
+		local sequence = session:buildExport() :: KeyframeSequence
+		for _, keyframe in sequence:GetKeyframes() do
+			for _, pose in keyframe:GetDescendants() do
+				expect(pose.Name).never.toBe(Model.CAMERA_TRACK)
+			end
+		end
+
+		session:importSequence(sequence)
+		expect(session.clip.tracks[Model.CAMERA_TRACK]).never.toBeNil()
+		sequence:Destroy()
+		session:destroy()
 	end)
 
 	it("keeps each rig's clip when switching rigs", function()
