@@ -16,7 +16,12 @@ function Interpolate.ease(alpha: number, style: Model.EasingStyle, direction: Mo
 end
 
 -- Returns the joint transform of `track` at `time` (identity when the track is empty).
-function Interpolate.sampleTrack(track: Model.Track, time: number): CFrame
+-- `blend` mixes two keyframe values (default CFrame:Lerp); the camera passes its own.
+function Interpolate.sampleTrack(
+	track: Model.Track,
+	time: number,
+	blend: ((from: CFrame, to: CFrame, alpha: number) -> CFrame)?
+): CFrame
 	local keyframes = track.keyframes
 	local count = #keyframes
 	if count == 0 then
@@ -35,7 +40,7 @@ function Interpolate.sampleTrack(track: Model.Track, time: number): CFrame
 		if time >= from.time and time < to.time then
 			local alpha = (time - from.time) / (to.time - from.time)
 			local eased = Interpolate.ease(alpha, from.easingStyle, from.easingDirection)
-			return from.value:Lerp(to.value, eased)
+			return if blend then blend(from.value, to.value, eased) else from.value:Lerp(to.value, eased)
 		end
 	end
 

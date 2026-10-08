@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 
 local Model = require(script.Parent.Parent.Core.Model)
 local Interpolate = require(script.Parent.Parent.Core.Interpolate)
+local CameraPath = require(script.Parent.Parent.Core.CameraPath)
 local Commands = require(script.Parent.Parent.Core.Commands)
 local Signal = require(script.Parent.Parent.Core.Signal)
 local Mirror = require(script.Parent.Parent.Core.Mirror)
@@ -266,7 +267,12 @@ function Session.cameraTransform(self: Session): CFrame?
 	if not track or #track.keyframes == 0 then
 		return nil
 	end
-	return Interpolate.sampleTrack(track, self.time)
+	-- Blend around the rig so a camera that looks at the character keeps looking at it.
+	local rootPart = self.binder and RigBinder.findRootPart(self.binder.joints)
+	local focus = if rootPart then rootPart.Position else nil
+	return Interpolate.sampleTrack(track, self.time, function(from, to, alpha)
+		return CameraPath.blend(from, to, alpha, focus)
+	end)
 end
 
 function Session._applyCameraPreview(self: Session)
