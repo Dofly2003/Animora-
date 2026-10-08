@@ -179,6 +179,24 @@ function Session.getJointTransform(self: Session, jointName: string): CFrame
 	return if track then Interpolate.sampleTrack(track, self.time) else CFrame.identity
 end
 
+-- The joint's rest frame on Part0 (C0 / Attachment0 before Animora posed it).
+function Session.restFrame0(self: Session, jointName: string): CFrame?
+	local joint = self.binder and self.binder.joints[jointName]
+	local preview = self._preview
+	if joint and preview then
+		return preview:restC0(joint)
+	end
+	return nil
+end
+
+-- True for the joint that connects the rig to its root part (LowerTorso on R15,
+-- Torso on R6): the one whose position, not just rotation, is animated.
+function Session.isRootJoint(self: Session, jointName: string): boolean
+	local binder = self.binder
+	local joint = binder and binder.joints[jointName]
+	return joint ~= nil and joint.Part0 == RigBinder.findRootPart(binder.joints)
+end
+
 -- Re-applies the pose at the current time to the rig (also after Studio undo/redo,
 -- which can change the C0 values underneath us).
 function Session.refreshPose(self: Session)
