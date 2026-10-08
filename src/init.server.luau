@@ -18,12 +18,12 @@ local Shortcuts = require(script.Studio.Shortcuts)
 local pluginSettings = Settings.new(plugin)
 Localization.setLanguage(pluginSettings:get("language"))
 
+-- Toolbar icon: assets/icon/icon-64.png uploaded to Roblox (an Image asset ID, not a
+-- Decal ID). Regenerate the PNGs with `python scripts/make_icon.py`.
+local ICON = "" -- e.g. "rbxassetid://1234567890"
+
 local toolbar = plugin:CreateToolbar("Animora")
-local toggleButton = toolbar:CreateButton(
-	"Animora",
-	Localization.t("toolbar.open.tooltip"),
-	"" -- TODO: upload the Animora icon and put its rbxassetid:// here
-)
+local toggleButton = toolbar:CreateButton("Animora", Localization.t("toolbar.open.tooltip"), ICON)
 toggleButton.ClickableWhenViewportHidden = true
 
 local widgetInfo = DockWidgetPluginGuiInfo.new(
