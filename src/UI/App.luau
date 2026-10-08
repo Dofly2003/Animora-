@@ -21,6 +21,7 @@ local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
 local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
 local RunGuard = require(script.Parent.Parent.Studio.RunGuard)
+local RigType = require(script.Parent.Parent.Core.RigType)
 local Timeline = require(script.Parent.Timeline)
 local ImportMenu = require(script.Parent.ImportMenu)
 local EasingMenu = require(script.Parent.EasingMenu)
@@ -246,6 +247,21 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		})
 	end
 
+	-- "R15", "R6" or "Custom rig", plus "Constraint" for Avatar Joint Upgrade rigs.
+	local function rigTypeText(): string
+		local binder = session.binder
+		if not binder then
+			return ""
+		end
+		local kinds: { [string]: string } = {}
+		for name, joint in binder.joints do
+			kinds[name] = joint.kind
+		end
+		local kind, constraint = RigType.classify(kinds)
+		local label = if kind == "Custom" then Localization.t("editor.rigType.custom") else kind
+		return if constraint then label .. " · Constraint" else label
+	end
+
 	local statusText = scope:Computed(function(use)
 		use(language)
 		use(sessionTick)
@@ -259,6 +275,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		return Localization.t("editor.status.rig", {
 			rig = rig.Name,
+			type = rigTypeText(),
 			joint = session.selectedJoint or Localization.t("editor.status.noJoint"),
 		})
 	end)
