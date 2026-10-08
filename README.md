@@ -2,7 +2,7 @@
 
 Free, open-source animation editor plugin for Roblox Studio — a community alternative to paid animation suites.
 
-> Status: **MVP done, preparing the beta (v0.1.0)**. Usable for real work, but expect rough edges. See [docs/ROADMAP.md](docs/ROADMAP.md).
+> Status: **v0.1.0 beta**. Usable for real work, but expect rough edges. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 **New here?** Read the [user guide](docs/GUIDE.md) (Bahasa Indonesia: [panduan](docs/PANDUAN.md)).
 

@@ -1,7 +1,7 @@
 --!strict
 -- Bahasa Indonesia. Keys must match en.luau; missing keys fall back to English.
 return {
-	["toolbar.open.tooltip"] = "Buka editor animasi Animora",
+	["toolbar.open.tooltip"] = "Buka editor animasi Animora (v{version})",
 
 	["app.welcome.title"] = "Selamat datang di Animora",
 	["app.welcome.body"] = "Pilih rig di viewport untuk mulai menganimasikan.",

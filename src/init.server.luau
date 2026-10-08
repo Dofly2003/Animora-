@@ -11,6 +11,7 @@ if RunGuard.isRunning() then
 end
 
 local Localization = require(script.Localization)
+local Version = require(script.Version)
 local Settings = require(script.Studio.Settings)
 local App = require(script.UI.App)
 local Shortcuts = require(script.Studio.Shortcuts)
@@ -23,7 +24,8 @@ Localization.setLanguage(pluginSettings:get("language"))
 local ICON = "rbxassetid://108366725262430"
 
 local toolbar = plugin:CreateToolbar("Animora")
-local toggleButton = toolbar:CreateButton("Animora", Localization.t("toolbar.open.tooltip"), ICON)
+local toggleButton =
+	toolbar:CreateButton("Animora", Localization.t("toolbar.open.tooltip", { version = Version }), ICON)
 toggleButton.ClickableWhenViewportHidden = true
 
 local widgetInfo = DockWidgetPluginGuiInfo.new(

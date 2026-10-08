@@ -1,7 +1,7 @@
 --!strict
 -- English strings (default + fallback). Keep keys sorted by area.
 return {
-	["toolbar.open.tooltip"] = "Open the Animora animation editor",
+	["toolbar.open.tooltip"] = "Open the Animora animation editor (v{version})",
 
 	["app.welcome.title"] = "Welcome to Animora",
 	["app.welcome.body"] = "Select a rig in the viewport to start animating.",
