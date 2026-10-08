@@ -76,6 +76,22 @@ local ACTIONS: { ActionSpec } = {
 		end,
 	},
 	{
+		id = "AnimoraRotateMode",
+		text = "Animora: Rotate mode",
+		tip = "Show the rotate rings (R in the viewport)",
+		run = function(session)
+			session:setGizmoMode("rotate")
+		end,
+	},
+	{
+		id = "AnimoraMoveMode",
+		text = "Animora: Move mode",
+		tip = "Show the move arrows on the root joint (T in the viewport)",
+		run = function(session)
+			session:setGizmoMode("move")
+		end,
+	},
+	{
 		id = "AnimoraMirror",
 		text = "Animora: Mirror pose",
 		tip = "Mirror the selected joint (or the whole pose) left/right",

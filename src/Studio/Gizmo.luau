@@ -1,6 +1,7 @@
 --!strict
--- Rotate handles (ArcHandles in CoreGui) on the selected joint's part, plus move arrows
--- (Handles) on the root joint so the whole body can be raised, lowered or shifted.
+-- Rotate handles (ArcHandles in CoreGui) on the selected joint's part, or, in move mode,
+-- move arrows (Handles) on the root joint so the whole body can be raised, lowered or
+-- shifted. Joints other than the root always show the rotate rings.
 -- Dragging previews the change live; releasing stores a keyframe at the current time.
 --
 -- Rotate math: Part1 = Part0 * C0 * T * C1:Inverse() (C0/C1 are the attachment frames for
@@ -165,9 +166,9 @@ function Gizmo.refresh(self: Gizmo)
 	local jointName = session.selectedJoint
 	local joint = jointName and session.binder and session.binder.joints[jointName]
 	local editable = joint ~= nil and not session.playing
+	local movable = editable and session.gizmoMode == "move" and jointName ~= nil and session:isRootJoint(jointName)
 	self.handles.Adornee = if joint then joint.Part1 else nil
-	self.handles.Visible = editable
-	local movable = editable and jointName ~= nil and session:isRootJoint(jointName)
+	self.handles.Visible = editable and not movable
 	self.moveHandles.Adornee = if movable and joint then joint.Part1 else nil
 	self.moveHandles.Visible = movable
 	self.highlight.Adornee = if joint then joint.Part1 else nil

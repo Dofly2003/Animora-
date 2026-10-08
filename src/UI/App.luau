@@ -98,6 +98,19 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		local open = not parent:IsA("PluginGui") or parent.Enabled
 		picker:setActive(open and not Fusion.peek(devMode))
 	end
+
+	-- R / T in the viewport switch the gizmo, like Studio's rotate and move tools. Keys
+	-- only reach the plugin while it is activated (panel open, picking on).
+	track(actions.plugin:GetMouse().KeyDown:Connect(function(key: string)
+		if not picker:isActive() or not session.rig or RunGuard.isRunning() then
+			return
+		end
+		if key == "r" then
+			session:setGizmoMode("rotate")
+		elseif key == "t" then
+			session:setGizmoMode("move")
+		end
+	end))
 	-- Re-activate after the user picked another Studio tool and came back to Animora.
 	track(session.changed:Connect(function(change)
 		if (change == "rig" or change == "selection") and session.rig then
@@ -602,6 +615,31 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							text = fpsText,
 							onClick = function()
 								session:cycleFps()
+							end,
+						}),
+						divider(12),
+						button({
+							order = 13,
+							width = 80,
+							text = text("editor.rotateMode"),
+							selected = scope:Computed(function(use)
+								use(sessionTick)
+								return session.gizmoMode == "rotate"
+							end),
+							onClick = function()
+								session:setGizmoMode("rotate")
+							end,
+						}),
+						button({
+							order = 14,
+							width = 80,
+							text = text("editor.moveMode"),
+							selected = scope:Computed(function(use)
+								use(sessionTick)
+								return session.gizmoMode == "move"
+							end),
+							onClick = function()
+								session:setGizmoMode("move")
 							end,
 						}),
 					}),

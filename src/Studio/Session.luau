@@ -61,6 +61,8 @@ local TIME_EPSILON = 1e-4
 local Session = {}
 Session.__index = Session
 
+export type GizmoMode = "rotate" | "move"
+
 export type Session = typeof(setmetatable(
 	{} :: {
 		rig: Model?,
@@ -77,6 +79,8 @@ export type Session = typeof(setmetatable(
 		loadClips: ((rig: Model) -> { Model.Clip }?)?,
 		time: number,
 		selectedJoint: string?,
+		-- Which viewport handles to show: rotate rings, or move arrows (root joint only).
+		gizmoMode: GizmoMode,
 		selectedKeys: { KeyRef },
 		playing: boolean,
 		changed: Signal.Signal,
@@ -101,6 +105,7 @@ function Session.new(): Session
 		loadClips = nil,
 		time = 0,
 		selectedJoint = nil,
+		gizmoMode = "rotate",
 		selectedKeys = {},
 		playing = false,
 		changed = Signal.new(),
@@ -195,6 +200,36 @@ function Session.isRootJoint(self: Session, jointName: string): boolean
 	local binder = self.binder
 	local joint = binder and binder.joints[jointName]
 	return joint ~= nil and joint.Part0 == RigBinder.findRootPart(binder.joints)
+end
+
+-- Name of the root joint (see isRootJoint), or nil when the rig has none.
+function Session.rootJointName(self: Session): string?
+	local binder = self.binder
+	if not binder then
+		return nil
+	end
+	local rootPart = RigBinder.findRootPart(binder.joints)
+	for name, joint in binder.joints do
+		if joint.Part0 == rootPart then
+			return name
+		end
+	end
+	return nil
+end
+
+-- Switches between rotate rings and move arrows. Only the root joint can be moved, so
+-- move mode selects it when another joint is selected.
+function Session.setGizmoMode(self: Session, mode: GizmoMode)
+	if mode == "move" then
+		local root = self:rootJointName()
+		if root and self.selectedJoint ~= root then
+			self:selectJoint(root)
+		end
+	end
+	if mode ~= self.gizmoMode then
+		self.gizmoMode = mode
+		self.changed:Fire("gizmoMode")
+	end
 end
 
 -- Re-applies the pose at the current time to the rig (also after Studio undo/redo,
