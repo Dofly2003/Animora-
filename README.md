@@ -46,7 +46,7 @@ Live sync while developing: `rojo serve`, then connect from the Rojo plugin in S
 rojo build test.project.json -o build/tests.rbxl
 ```
 
-Open `build/tests.rbxl` in Studio and press **Run** (F8). Results appear in the Output window.
+Open `build/tests.rbxl` in Studio and stay in edit mode. Paste the contents of `scripts/RunTestsCommandBar.luau` into the **Command Bar** and press Enter; results appear in the Output window. (Run / F8 no longer works for Jest-lua in current Studio: reading `ModuleScript.Source` needs plugin-level access.)
 
 ### Lint and format
 
