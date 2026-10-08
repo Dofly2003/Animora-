@@ -3,9 +3,16 @@
 -- the plugin is activated (plugin:Activate), which switches off Studio's Select / Move /
 -- Rotate tools: a click then picks one body part instead of selecting the whole model,
 -- and Studio's own handles cannot rotate the whole rig by accident.
+--
+-- Clicks look through clothing, hair and other accessories: once the rig under the mouse
+-- is known, a second cast only hits its body parts, and a thin sphere cast forgives clicks
+-- that land just beside a limb (useful when the camera is far away).
 
 local RigBinder = require(script.Parent.RigBinder)
 local Session = require(script.Parent.Session)
+
+local CAST_DISTANCE = 2000
+local FORGIVING_RADIUS = 0.35 -- studs; a click this close to a limb still picks it
 
 local ViewportPicker = {}
 ViewportPicker.__index = ViewportPicker
@@ -13,6 +20,8 @@ ViewportPicker.__index = ViewportPicker
 export type ViewportPicker = typeof(setmetatable(
 	{} :: {
 		_plugin: Plugin,
+		_mouse: PluginMouse,
+		_session: Session.Session,
 		_active: boolean,
 		_connections: { RBXScriptConnection },
 	},
@@ -42,14 +51,41 @@ local function bodyPartFor(target: BasePart, binder: RigBinder.RigBinder): BaseP
 	return nil
 end
 
+-- The rig's animatable body parts (each joint's Part1).
+local function bodyParts(binder: RigBinder.RigBinder): { Instance }
+	local parts = {}
+	for _, joint in binder.joints do
+		table.insert(parts, joint.Part1)
+	end
+	return parts
+end
+
+-- Casts the mouse ray against the rig's body parts only: first exactly, then with a
+-- small sphere so near misses still count.
+local function castBody(ray: Ray, binder: RigBinder.RigBinder): BasePart?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = bodyParts(binder)
+	local direction = ray.Direction.Unit * CAST_DISTANCE
+	local hit = workspace:Raycast(ray.Origin, direction, params)
+		or workspace:Spherecast(ray.Origin, FORGIVING_RADIUS, direction, params)
+	return if hit then hit.Instance :: BasePart else nil
+end
+
 function ViewportPicker.new(
 	pluginRef: Plugin,
 	session: Session.Session,
 	canPick: () -> boolean,
 	isDraggingGizmo: () -> boolean
 ): ViewportPicker
-	local self = setmetatable({ _plugin = pluginRef, _active = false, _connections = {} }, ViewportPicker)
-	local mouse = pluginRef:GetMouse()
+	local self = setmetatable({
+		_plugin = pluginRef,
+		_mouse = pluginRef:GetMouse(),
+		_session = session,
+		_active = false,
+		_connections = {},
+	}, ViewportPicker)
+	local mouse = self._mouse
 
 	-- The user chose another Studio tool (e.g. Move); stop picking until re-activated.
 	table.insert(
@@ -66,23 +102,48 @@ function ViewportPicker.new(
 				return
 			end
 			local target = mouse.Target
+			local ray = mouse.UnitRay
 			-- Let a gizmo handle click register first; ignore clicks that started a drag.
 			task.defer(function()
-				if isDraggingGizmo() or not target then
-					return
+				if not isDraggingGizmo() then
+					self:pick(target, ray)
 				end
-				local rig = RigBinder.findRig(target)
-				if not rig then
-					return
-				end
-				session:setRig(rig)
-				local binder = session.binder
-				local part = binder and bodyPartFor(target, binder)
-				session:selectJoint(if part then part.Name else nil)
 			end)
 		end)
 	)
 	return self
+end
+
+-- Picks the rig and body part for a click. `target` is what the mouse hit (it may be an
+-- accessory); `ray` is the mouse ray. Returns true when a joint was selected.
+function ViewportPicker.pick(self: ViewportPicker, target: BasePart?, ray: Ray): boolean
+	local session = self._session
+	local rig = if target then RigBinder.findRig(target) else nil
+	-- A click just beside the current rig's thin limbs hits the world behind it; still
+	-- try the current rig.
+	rig = rig or session.rig
+	if not rig then
+		return false
+	end
+
+	local binder = if session.binder and session.rig == rig then session.binder else RigBinder.new(rig)
+	local part = castBody(ray, binder)
+	if not part and target and target:IsDescendantOf(rig) then
+		part = bodyPartFor(target, binder)
+	end
+	if not part then
+		return false
+	end
+	session:setRig(rig)
+	session:selectJoint(part.Name)
+	return true
+end
+
+-- Picks whatever is under the mouse right now (used when Studio selected the whole rig
+-- before Animora's picking was active).
+function ViewportPicker.pickUnderMouse(self: ViewportPicker): boolean
+	local mouse = self._mouse
+	return self:pick(mouse.Target, mouse.UnitRay)
 end
 
 -- Turns picking on (activating the plugin) or off (giving the mouse back to Studio).

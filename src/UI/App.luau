@@ -140,12 +140,21 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		notice:set(nil)
 		session:setRig(rig)
+		local picked = false
 		if selected:IsA("BasePart") and session.binder then
 			local joint = session.binder.joints[selected.Name]
 			if joint and joint.Part1 == selected then
 				session:selectJoint(selected.Name)
+				picked = true
 			end
 		end
+		-- Studio's Select tool picked the whole model (Animora's picking was not active
+		-- yet, e.g. on the first click after opening the place): use the body part under
+		-- the mouse, so the first click already selects an arm or the torso.
+		if not picked then
+			picker:pickUnderMouse()
+		end
+		updatePicker()
 	end
 	track(Selection.SelectionChanged:Connect(onSelectionChanged))
 
