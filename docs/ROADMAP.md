@@ -25,4 +25,6 @@ Phase 2 (MVP core) gate passed: many clips have been made end to end and play in
 
 Done: phase 0 spikes; timeline, rotate gizmo with auto-key, keyframe editing (select, move, delete, copy/paste, mirror), frame stepping and FPS, per-keyframe easing, Studio Ctrl+Z/Ctrl+Y, bindable shortcuts, R6 / R15 / AnimationConstraint avatars, autosave, several animations per rig, export/import (place and asset ID), 20 starter templates (basic, Scared, Flashlight, ghost and NISKALA sets) in a scrollable list.
 
-Before beta: run the test place, move gizmo for the root joint, toolbar layout, remove spike tools, rig-type label, plugin icon, user guide, v0.1.0 release.
+Also done since: move gizmo for the root joint with rotate (R) / move (T) modes, picking body parts through accessories, a toolbar grouped into clip / playback / edit rows, spike tools removed.
+
+Before beta: run the test place, rig-type label, plugin icon, user guide, v0.1.0 release.

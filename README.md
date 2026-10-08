@@ -7,7 +7,8 @@ Free, open-source animation editor plugin for Roblox Studio — a community alte
 ## Features
 
 - Timeline with keyframes, scrubbing, play/loop, frame stepping and FPS
-- Rotate gizmo with auto-key; pick single body parts in the viewport
+- Rotate gizmo with auto-key, and a move gizmo for the root joint (switch with R / T)
+- Pick single body parts in the viewport, even through hair, clothing and accessories
 - Select, move, delete, copy/paste and left/right mirror keyframes
 - Per-keyframe easing
 - R6, R15 and AnimationConstraint (Avatar Joint Upgrade) rigs; several animations per rig
@@ -17,7 +18,7 @@ Free, open-source animation editor plugin for Roblox Studio — a community alte
 
 ### Planned
 
-- Before the beta: move gizmo for the root joint, toolbar layout, rig-type label, plugin icon, user guide
+- Before the beta: rig-type label, plugin icon, user guide
 - v1: IK, curve editor, camera and object animation, multiple rigs, onion skin, pose library
 - v2: markers with a Luau code generator, animation debugger
 

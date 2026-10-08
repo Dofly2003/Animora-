@@ -1,7 +1,11 @@
 --!strict
 -- Root UI of the Animora dock widget (Fusion 0.3): toolbar on top, timeline below.
--- Owns the editor Session, the rotate gizmo and the Studio selection hookup.
--- The week-1 spike tools are still reachable behind the "Dev" toggle.
+-- Owns the editor Session, the gizmos and the Studio selection hookup.
+--
+-- Toolbar rows, grouped by purpose:
+--   1. Clip      animation, length, loop, FPS, priority | export, import, language
+--   2. Playback  keyframe/frame stepping, play, time | undo, redo | rotate / move mode
+--   3. Edit      copy, paste, delete, mirror, easing, then the status message
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local Selection = game:GetService("Selection")
@@ -18,7 +22,6 @@ local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
 local Storage = require(script.Parent.Parent.Studio.Storage)
 local RunGuard = require(script.Parent.Parent.Studio.RunGuard)
 local Timeline = require(script.Parent.Timeline)
-local DevPanel = require(script.Parent.DevPanel)
 local ImportMenu = require(script.Parent.ImportMenu)
 local EasingMenu = require(script.Parent.EasingMenu)
 local AnimationsMenu = require(script.Parent.AnimationsMenu)
@@ -39,7 +42,6 @@ export type AppHandle = {
 }
 
 export type AppActions = {
-	openTimelineTest: () -> (),
 	plugin: Plugin,
 }
 
@@ -60,7 +62,6 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 
 	local language = scope:Value(Localization.getLanguage())
 	local themeTick = scope:Value(0)
-	local devMode = scope:Value(false)
 	-- Bumped on every session change so toolbar texts recompute.
 	local sessionTick = scope:Value(0)
 	-- Short message shown in the status bar (e.g. "this model has no joints").
@@ -90,13 +91,13 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	-- Clicking in the viewport picks a single body part (Studio's tools are switched off
 	-- while the panel is open, so the whole model is not selected or rotated).
 	local picker = ViewportPicker.new(actions.plugin, session, function()
-		return not Fusion.peek(devMode) and not RunGuard.isRunning()
+		return not RunGuard.isRunning()
 	end, function()
 		return gizmo:isDragging()
 	end)
 	local function updatePicker()
 		local open = not parent:IsA("PluginGui") or parent.Enabled
-		picker:setActive(open and not Fusion.peek(devMode))
+		picker:setActive(open)
 	end
 
 	-- R / T in the viewport switch the gizmo, like Studio's rotate and move tools. Keys
@@ -120,9 +121,8 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 
 	-- Selecting a rig part in the viewport picks the rig and the joint it belongs to.
 	local function onSelectionChanged()
-		-- Never touch rigs while the panel is closed, the spike tools are active or a Run
-		-- (F8) test is going on.
-		if Fusion.peek(devMode) or RunGuard.isRunning() or (parent:IsA("PluginGui") and not parent.Enabled) then
+		-- Never touch rigs while the panel is closed or a Run (F8) test is going on.
+		if RunGuard.isRunning() or (parent:IsA("PluginGui") and not parent.Enabled) then
 			return
 		end
 		local selected = Selection:Get()[1]
@@ -380,12 +380,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 	end
 
-	local function row(order: number, children: { any })
-		local rowChildren: { any } = {
-			scope:New("UIPadding")({
-				PaddingLeft = UDim.new(0, Theme.PADDING),
-				PaddingRight = UDim.new(0, Theme.PADDING),
-			}),
+	-- A horizontal run of controls. Rows hold a left group and an optional right group.
+	local function group(children: { any }, alignRight: boolean?)
+		local groupChildren: { any } = {
 			scope:New("UIListLayout")({
 				FillDirection = Enum.FillDirection.Horizontal,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
@@ -394,7 +391,31 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			}),
 		}
 		for _, child in children do
-			table.insert(rowChildren, child)
+			table.insert(groupChildren, child)
+		end
+		return scope:New("Frame")({
+			AnchorPoint = Vector2.new(if alignRight then 1 else 0, 0),
+			Position = UDim2.fromScale(if alignRight then 1 else 0, 0),
+			Size = UDim2.fromScale(0, 1),
+			AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundTransparency = 1,
+			[Children] = groupChildren,
+		})
+	end
+
+	local function row(order: number, left: { any }, right: { any }?, extra: any?)
+		local rowChildren: { any } = {
+			scope:New("UIPadding")({
+				PaddingLeft = UDim.new(0, Theme.PADDING),
+				PaddingRight = UDim.new(0, Theme.PADDING),
+			}),
+			group(left),
+		}
+		if right then
+			table.insert(rowChildren, group(right, true))
+		end
+		if extra then
+			table.insert(rowChildren, extra)
 		end
 		return scope:New("Frame")({
 			LayoutOrder = order,
@@ -410,6 +431,20 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			Size = UDim2.fromOffset(1, 20),
 			BorderSizePixel = 0,
 			BackgroundColor3 = color(Enum.StudioStyleGuideColor.Border),
+		})
+	end
+
+	local function label(order: number, width: number, value: any, dimmed: boolean?)
+		return scope:New("TextLabel")({
+			LayoutOrder = order,
+			Size = UDim2.fromOffset(width, 26),
+			BackgroundTransparency = 1,
+			FontFace = Theme.FONT,
+			TextSize = Theme.TEXT_SIZE,
+			Text = value,
+			TextColor3 = color(
+				if dimmed then Enum.StudioStyleGuideColor.DimmedText else Enum.StudioStyleGuideColor.MainText
+			),
 		})
 	end
 
@@ -445,29 +480,17 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		Position = UDim2.fromOffset(0, TOOLBAR_HEIGHT),
 		Size = UDim2.new(1, 0, 1, -TOOLBAR_HEIGHT),
 		BackgroundTransparency = 1,
-		Visible = scope:Computed(function(use)
-			return not use(devMode)
-		end),
 	})
 
-	local devHost = scope:New("ScrollingFrame")({
-		Name = "DevHost",
-		Position = UDim2.fromOffset(0, TOOLBAR_HEIGHT),
-		Size = UDim2.new(1, 0, 1, -TOOLBAR_HEIGHT),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		CanvasSize = UDim2.fromOffset(0, 140),
-		ScrollBarThickness = 8,
-		Visible = devMode,
-		[Children] = {
-			scope:New("UIPadding")({
-				PaddingTop = UDim.new(0, Theme.PADDING),
-				PaddingLeft = UDim.new(0, Theme.PADDING * 2),
-				PaddingRight = UDim.new(0, Theme.PADDING * 2),
-			}),
-			DevPanel.create(scope, { language = language, text = text, color = color }, 1, parent, actions),
-		},
-	})
+	local function modeSelected(mode: Session.GizmoMode)
+		return scope:Computed(function(use)
+			use(sessionTick)
+			return session.gizmoMode == mode
+		end)
+	end
+
+	-- Width of the edit row's buttons; the status message fills the rest of that row.
+	local EDIT_GROUP_WIDTH = 470
 
 	scope:New("Frame")({
 		Name = "AnimoraApp",
@@ -484,73 +507,66 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 					scope:New("UIListLayout")({
 						SortOrder = Enum.SortOrder.LayoutOrder,
 					}),
+					-- 1. Clip settings | file and language
 					row(1, {
 						button({
 							order = 1,
-							width = 70,
-							text = playText,
+							width = 170,
+							text = animationText,
 							onClick = function()
-								session:togglePlay()
+								togglePanel(animationsMenu, easingMenu)
 							end,
+						}),
+						divider(2),
+						label(3, 52, text("editor.length")),
+						(function()
+							lengthBox.LayoutOrder = 4
+							return lengthBox
+						end)(),
+						label(5, 12, "s", true),
+						button({
+							order = 6,
+							width = 60,
+							text = text("editor.loop"),
+							selected = loopSelected,
+							onClick = function()
+								session:toggleLooped()
+							end,
+						}),
+						button({
+							order = 7,
+							width = 70,
+							text = fpsText,
+							onClick = function()
+								session:cycleFps()
+							end,
+						}),
+						button({
+							order = 8,
+							width = 150,
+							text = priorityText,
+							onClick = function()
+								session:cyclePriority()
+							end,
+						}),
+					}, {
+						button({
+							order = 1,
+							width = 70,
+							text = text("editor.export"),
+							onClick = exportClip,
 						}),
 						button({
 							order = 2,
-							width = 60,
-							text = text("editor.undo"),
-							onClick = function()
-								StudioUndo.undo()
-							end,
+							width = 70,
+							text = text("editor.import"),
+							onClick = importClip,
 						}),
-						button({
-							order = 3,
-							width = 60,
-							text = text("editor.redo"),
-							onClick = function()
-								StudioUndo.redo()
-							end,
-						}),
-						scope:New("TextLabel")({
-							LayoutOrder = 4,
-							Size = UDim2.fromOffset(170, 26),
-							BackgroundTransparency = 1,
-							FontFace = Theme.FONT,
-							TextSize = Theme.TEXT_SIZE,
-							TextXAlignment = Enum.TextXAlignment.Center,
-							Text = timeText,
-							TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
-						}),
-						scope:New("TextLabel")({
-							LayoutOrder = 5,
-							Size = UDim2.new(1, -620, 0, 26),
-							BackgroundTransparency = 1,
-							FontFace = Theme.FONT,
-							TextSize = Theme.TEXT_SIZE,
-							TextXAlignment = Enum.TextXAlignment.Left,
-							TextTruncate = Enum.TextTruncate.AtEnd,
-							Text = statusText,
-							TextColor3 = color(Enum.StudioStyleGuideColor.DimmedText),
-						}),
-						languageButton("en", 6),
-						languageButton("id", 7),
-						button({
-							order = 8,
-							width = 50,
-							text = "Dev",
-							selected = devMode,
-							onClick = function()
-								local enable = not Fusion.peek(devMode)
-								if enable then
-									-- Spike tools pose rigs themselves; release the editor's rig first.
-									session:setRig(nil)
-								end
-								devMode:set(enable)
-								updatePicker()
-								if not enable then
-									onSelectionChanged()
-								end
-							end,
-						}),
+						divider(3),
+						languageButton("en", 4),
+						languageButton("id", 5),
 					}),
+					-- 2. Playback and time | undo | gizmo mode
 					row(2, {
 						button({
 							order = 1,
@@ -570,6 +586,14 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 						}),
 						button({
 							order = 3,
+							width = 70,
+							text = playText,
+							onClick = function()
+								session:togglePlay()
+							end,
+						}),
+						button({
+							order = 4,
 							width = 34,
 							text = ">",
 							onClick = function()
@@ -577,152 +601,113 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							end,
 						}),
 						button({
-							order = 4,
+							order = 5,
 							width = 34,
 							text = ">|",
 							onClick = function()
 								session:jumpToKey(1)
 							end,
 						}),
-						divider(5),
-						button({
-							order = 6,
-							width = 60,
-							text = text("editor.copy"),
-							onClick = function()
-								session:copy()
-							end,
-						}),
-						button({
-							order = 7,
-							width = 60,
-							text = text("editor.paste"),
-							onClick = function()
-								session:paste()
-							end,
-						}),
+						label(6, 170, timeText),
+						divider(7),
 						button({
 							order = 8,
 							width = 60,
-							text = text("editor.delete"),
+							text = text("editor.undo"),
 							onClick = function()
-								session:deleteSelectedKeys()
+								StudioUndo.undo()
 							end,
 						}),
 						button({
 							order = 9,
-							width = 70,
-							text = text("editor.mirror"),
+							width = 60,
+							text = text("editor.redo"),
 							onClick = function()
-								session:mirror()
+								StudioUndo.redo()
 							end,
 						}),
 						divider(10),
 						button({
 							order = 11,
-							width = 70,
-							text = fpsText,
-							onClick = function()
-								session:cycleFps()
-							end,
-						}),
-						divider(12),
-						button({
-							order = 13,
 							width = 80,
 							text = text("editor.rotateMode"),
-							selected = scope:Computed(function(use)
-								use(sessionTick)
-								return session.gizmoMode == "rotate"
-							end),
+							selected = modeSelected("rotate"),
 							onClick = function()
 								session:setGizmoMode("rotate")
 							end,
 						}),
 						button({
-							order = 14,
+							order = 12,
 							width = 80,
 							text = text("editor.moveMode"),
-							selected = scope:Computed(function(use)
-								use(sessionTick)
-								return session.gizmoMode == "move"
-							end),
+							selected = modeSelected("move"),
 							onClick = function()
 								session:setGizmoMode("move")
 							end,
 						}),
 					}),
-					row(3, {
-						button({
-							order = 0,
-							width = 170,
-							text = animationText,
-							onClick = function()
-								togglePanel(animationsMenu, easingMenu)
-							end,
-						}),
+					-- 3. Keyframe editing, then the status message
+					row(
+						3,
+						{
+							button({
+								order = 1,
+								width = 60,
+								text = text("editor.copy"),
+								onClick = function()
+									session:copy()
+								end,
+							}),
+							button({
+								order = 2,
+								width = 60,
+								text = text("editor.paste"),
+								onClick = function()
+									session:paste()
+								end,
+							}),
+							button({
+								order = 3,
+								width = 60,
+								text = text("editor.delete"),
+								onClick = function()
+									session:deleteSelectedKeys()
+								end,
+							}),
+							button({
+								order = 4,
+								width = 70,
+								text = text("editor.mirror"),
+								onClick = function()
+									session:mirror()
+								end,
+							}),
+							divider(5),
+							button({
+								order = 6,
+								width = 170,
+								text = easingText,
+								onClick = function()
+									togglePanel(easingMenu, animationsMenu)
+								end,
+							}),
+						},
+						nil,
 						scope:New("TextLabel")({
-							LayoutOrder = 1,
-							Size = UDim2.fromOffset(52, 26),
+							Position = UDim2.fromOffset(EDIT_GROUP_WIDTH, 0),
+							Size = UDim2.new(1, -EDIT_GROUP_WIDTH, 1, 0),
 							BackgroundTransparency = 1,
 							FontFace = Theme.FONT,
 							TextSize = Theme.TEXT_SIZE,
-							Text = text("editor.length"),
-							TextColor3 = color(Enum.StudioStyleGuideColor.MainText),
-						}),
-						lengthBox,
-						scope:New("TextLabel")({
-							LayoutOrder = 3,
-							Size = UDim2.fromOffset(12, 26),
-							BackgroundTransparency = 1,
-							FontFace = Theme.FONT,
-							TextSize = Theme.TEXT_SIZE,
-							Text = "s",
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextTruncate = Enum.TextTruncate.AtEnd,
+							Text = statusText,
 							TextColor3 = color(Enum.StudioStyleGuideColor.DimmedText),
-						}),
-						button({
-							order = 4,
-							width = 60,
-							text = text("editor.loop"),
-							selected = loopSelected,
-							onClick = function()
-								session:toggleLooped()
-							end,
-						}),
-						button({
-							order = 5,
-							width = 150,
-							text = priorityText,
-							onClick = function()
-								session:cyclePriority()
-							end,
-						}),
-						button({
-							order = 6,
-							width = 170,
-							text = easingText,
-							onClick = function()
-								togglePanel(easingMenu, animationsMenu)
-							end,
-						}),
-						divider(7),
-						button({
-							order = 8,
-							width = 70,
-							text = text("editor.export"),
-							onClick = exportClip,
-						}),
-						button({
-							order = 9,
-							width = 70,
-							text = text("editor.import"),
-							onClick = importClip,
-						}),
-					}),
+						})
+					),
 				},
 			}),
 			timelineHost,
-			devHost,
 		},
 	})
 

@@ -80,26 +80,6 @@ return {
 	["animations.deleted"] = "{name} dihapus (Ctrl+Z untuk membatalkan).",
 	["animations.renamed"] = "Nama diganti menjadi {name}.",
 
-	["spike.title"] = "Tes developer - Spike C: preview, Spike A: ekspor, Spike B: timeline",
-	["spike.wave"] = "Lambai",
-	["spike.stop"] = "Stop",
-	["spike.export"] = "Ekspor lambaian",
-	["spike.export.done"] = "{name} ({keyframes} keyframe) diekspor ke ServerStorage > AnimoraSaves > Exports dan sudah dipilih. Klik kanan > Save to Roblox untuk mem-publish.",
-	["spike.export.error"] = "Ekspor gagal: {reason}",
-	["spike.status.idle"] = "Pilih rig (atau salah satu part-nya) di viewport, lalu tekan tombol Lambai.",
-	["spike.status.noRig"] = "Belum ada rig yang dipilih. Pilih model yang punya joint Motor6D atau AnimationConstraint.",
-	["spike.status.noArm"] = "Rig ini tidak punya joint RightUpperArm (R15) atau Right Arm (R6).",
-	["spike.status.playing"] = "Memutar di {rig}: {fps} update/detik. Tekan Stop sebelum menyimpan place.",
-	["spike.status.stopped"] = "Berhenti. Pose rig sudah dikembalikan.",
-	["spike.status.noUpdates"] = "Tidak ada update frame di mode edit (Heartbeat tidak berjalan). Tolong laporkan hasil ini.",
-
-	["spike.timeline"] = "Tes timeline",
-	["timelineTest.auto"] = "Jalankan tes otomatis (6 dtk)",
-	["timelineTest.running"] = "Berjalan...",
-	["timelineTest.hint"] = "Penggaris: seret = scrub, roda = zoom, Shift+roda = geser",
-	["timelineTest.live"] = "Langsung: {fps} fps, frame terburuk {worst} ms, scrub terakhir {scrub} ms, {markers} marker digambar",
-	["timelineTest.result"] = "Tes otomatis: rata-rata {fps} fps, frame terburuk {worst} ms, scrub rata-rata {scrubAvg} ms / maks {scrubMax} ms, hingga {markers} marker",
-
 	["export.success"] = '"{name}" berhasil diekspor ke {location}',
 	["export.error"] = "Ekspor gagal: {reason}",
 }
