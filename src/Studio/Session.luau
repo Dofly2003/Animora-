@@ -273,9 +273,10 @@ local function setKeyKeepingEasing(clip: Model.Clip, trackName: string, time: nu
 end
 
 -- The camera track's CFrame at the current time, or nil when it has no keyframes.
-function Session.cameraTransform(self: Session): CFrame?
+-- `time` defaults to the playhead (where a live drag override also applies).
+function Session.cameraTransform(self: Session, time: number?): CFrame?
 	local override = self._override
-	if override and override.name == Model.CAMERA_TRACK then
+	if time == nil and override and override.name == Model.CAMERA_TRACK then
 		return override.value
 	end
 	local track = self.clip and self.clip.tracks[Model.CAMERA_TRACK]
@@ -285,7 +286,7 @@ function Session.cameraTransform(self: Session): CFrame?
 	-- Blend around the rig so a camera that looks at the character keeps looking at it.
 	local rootPart = self.binder and RigBinder.findRootPart(self.binder.joints)
 	local focus = if rootPart then rootPart.Position else nil
-	return Interpolate.sampleTrack(track, self.time, function(from, to, alpha)
+	return Interpolate.sampleTrack(track, time or self.time, function(from, to, alpha)
 		return CameraPath.blend(from, to, alpha, focus)
 	end)
 end

@@ -16,6 +16,7 @@ local Theme = require(script.Parent.Theme)
 local Settings = require(script.Parent.Parent.Studio.Settings)
 local Session = require(script.Parent.Parent.Studio.Session)
 local Gizmo = require(script.Parent.Parent.Studio.Gizmo)
+local CameraPathView = require(script.Parent.Parent.Studio.CameraPathView)
 local RigBinder = require(script.Parent.Parent.Studio.RigBinder)
 local StudioUndo = require(script.Parent.Parent.Studio.StudioUndo)
 local ViewportPicker = require(script.Parent.Parent.Studio.ViewportPicker)
@@ -61,6 +62,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	end
 	session.loadClips = Storage.loadClips
 	local gizmo = Gizmo.new(session)
+	local cameraPath = CameraPathView.new(session)
 
 	local language = scope:Value(Localization.getLanguage())
 	local themeTick = scope:Value(0)
@@ -840,6 +842,7 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		picker:destroy()
 		gizmo:destroy()
+		cameraPath:destroy()
 		session:destroy()
 		scope:doCleanup()
 	end
