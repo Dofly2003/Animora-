@@ -11,14 +11,17 @@
 --   origin = CFrame,      play the shot around this CFrame instead of where it was made
 --                         (pass the character's HumanoidRootPart.CFrame, for example)
 --   speed = 1,            playback speed
---   restore = true,       give the camera back to the player when the shot ends
+--   restore = true,       give the camera back to the player's character when it ends
 --   onEnded = function,   called when the shot ends or is stopped
 -- })
 -- handle:Stop() ends a shot early (also needed for looped shots).
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local AnimoraCamera = {}
+
+local playCount = 0
 
 export type Shot = {
 	version: number,
@@ -72,16 +75,30 @@ function AnimoraCamera.sample(shot: Shot, time: number): (CFrame, number)
 	return cframe, fov
 end
 
+-- The local player's Humanoid, waiting (up to 10 s) for the character to spawn: a shot
+-- started before that would be overridden by Roblox's camera taking over the new body.
+local function waitForHumanoid(): Humanoid?
+	local player = Players.LocalPlayer
+	if not player then
+		return nil
+	end
+	local character = player.Character or player.CharacterAdded:Wait()
+	return character:WaitForChild("Humanoid", 10) :: Humanoid?
+end
+
 function AnimoraCamera.play(shot: Shot, options: Options?): Handle
 	assert(type(shot) == "table" and shot.frames and #shot.frames > 0, "AnimoraCamera.play: not an Animora camera shot")
 	local settings: Options = options or {}
+	local humanoid = waitForHumanoid()
 	local camera = workspace.CurrentCamera
-	local previousType, previousSubject, previousFov = camera.CameraType, camera.CameraSubject, camera.FieldOfView
+	local previousFov = camera.FieldOfView
 	-- Re-centre the shot on `origin`: frames were made relative to the rig's root.
 	local offset = if settings.origin then settings.origin * frameCFrame(shot.root):Inverse() else nil
 	local speed = settings.speed or 1
 	local elapsed = 0
-	local connection: RBXScriptConnection? = nil
+	playCount += 1
+	-- Runs right after Roblox's camera scripts each frame, so the shot always wins.
+	local bindName = "AnimoraCamera" .. playCount
 
 	local handle = { playing = true } :: Handle
 
@@ -97,12 +114,14 @@ function AnimoraCamera.play(shot: Shot, options: Options?): Handle
 			return
 		end
 		handle.playing = false
-		if connection then
-			connection:Disconnect()
-		end
+		RunService:UnbindFromRenderStep(bindName)
 		if settings.restore ~= false then
-			camera.CameraType = previousType
-			camera.CameraSubject = previousSubject
+			-- Back to the normal player camera (not the state before the shot, which may be
+			-- the Fixed camera Roblox uses before the character has spawned).
+			camera.CameraType = Enum.CameraType.Custom
+			if humanoid and humanoid.Parent then
+				camera.CameraSubject = humanoid
+			end
 			camera.FieldOfView = previousFov
 		end
 		if settings.onEnded then
@@ -121,7 +140,7 @@ function AnimoraCamera.play(shot: Shot, options: Options?): Handle
 	end
 
 	apply(0)
-	connection = RunService.RenderStepped:Connect(function(deltaTime)
+	RunService:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value + 2, function(deltaTime)
 		elapsed += deltaTime * speed
 		if elapsed >= shot.length and not shot.looped then
 			apply(shot.length)
