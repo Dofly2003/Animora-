@@ -4,7 +4,7 @@ A short walk through everything Animora does today. Indonesian version: [PANDUAN
 
 ## 1. Install and open
 
-1. Get Animora from the Creator Store, or copy `Animora.rbxmx` from a GitHub release into your Studio plugins folder (Studio: **Plugins → Plugins Folder**) and restart Studio.
+1. Get Animora free from the [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora) (Studio installs it for you), or copy `Animora.rbxmx` from a GitHub release into your Studio plugins folder (Studio: **Plugins → Plugins Folder**) and restart Studio.
 2. Click **Animora** in the **Plugins** tab. The editor opens as a panel at the bottom of Studio.
 3. Pick your language with the **EN / ID** buttons (top right of the panel).
 

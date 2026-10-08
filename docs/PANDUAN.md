@@ -4,7 +4,7 @@ Ringkasan semua yang bisa dilakukan Animora saat ini. Versi bahasa Inggris: [GUI
 
 ## 1. Pasang dan buka
 
-1. Ambil Animora dari Creator Store, atau salin `Animora.rbxmx` dari rilis GitHub ke folder plugin Studio (Studio: **Plugins → Plugins Folder**), lalu buka ulang Studio.
+1. Ambil Animora gratis dari [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora) (Studio memasangnya otomatis), atau salin `Animora.rbxmx` dari rilis GitHub ke folder plugin Studio (Studio: **Plugins → Plugins Folder**), lalu buka ulang Studio.
 2. Klik **Animora** di tab **Plugins**. Editor terbuka sebagai panel di bagian bawah Studio.
 3. Pilih bahasa dengan tombol **EN / ID** (kanan atas panel).
 
