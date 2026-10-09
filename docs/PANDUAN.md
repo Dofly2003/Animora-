@@ -109,7 +109,22 @@ Tekan **Import**:
 
 ## 11. Shortcut
 
-Perintah Animora terdaftar sebagai plugin action Studio. Atur tombolnya di **File → Customize Shortcuts** (cari "Animora"): Play / Pause, frame berikut / sebelumnya, keyframe berikut / sebelumnya, Copy, Paste, Delete keyframes, Mirror, Rotate mode, Move mode. **R** dan **T** di viewport langsung bisa dipakai tanpa diatur.
+Tombol **Shortcut** di toolbar menampilkan semua tombol keyboard. Daftar ini juga muncul sendiri saat Animora pertama kali dibuka.
+
+**Langsung bisa dipakai.** Klik viewport sekali supaya fokus pindah ke sana, lalu tekan:
+
+| Tombol | Fungsi |
+| --- | --- |
+| Space | Putar / jeda |
+| Z / C | Frame sebelumnya / berikutnya |
+| [ / ] | Keyframe sebelumnya / berikutnya |
+| R / T | Mode putar / mode geser (root) |
+| M | Cerminkan pose |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+
+**Atur tombol sendiri.** Salin, tempel dan hapus belum punya tombol bawaan, karena Ctrl+C, Ctrl+V dan Delete dipakai Studio untuk seleksinya sendiri. Buka **File → Customize Shortcuts**, ketik "Animora" di kotak pencarian, klik kolom Shortcut pada perintahnya lalu tekan tombol, misalnya Alt+C untuk *Animora: Copy keyframes*, Alt+V untuk *Paste keyframes* dan Alt+D untuk *Delete keyframes*. Perintah lain juga bisa diberi tombol sendiri di sana. Tombol ini berlaku di mana saja di Studio selama panel Animora terbuka, dan tombol yang diatur di sana sekaligus di viewport tetap jalan sekali.
+
+Kalau setiap perintah Animora muncul dua kali di Customize Shortcuts, berarti ada dua salinan plugin yang terpasang (misalnya plugin file lokal dan versi yang dipublikasikan). Hapus salah satunya di **Plugins → Manage Plugins** atau di folder Plugins.
 
 ## 12. Kalau ada masalah
 
@@ -118,7 +133,7 @@ Perintah Animora terdaftar sebagai plugin action Studio. Atur tombolnya di **Fil
 | Klik memilih seluruh model | Klik bagian tubuhnya sekali lagi; Animora langsung memilihnya selama panelnya terbuka. |
 | "tidak punya joint Motor6D atau AnimationConstraint" | Model itu bukan rig yang bisa digerakkan Animora (misalnya mesh skinned). |
 | Panah tidak muncul di mode Geser | Panah hanya muncul di root; tekan T untuk memilihnya. |
-| R / T tidak bereaksi | Klik sekali di viewport supaya fokus pindah ke sana, atau pakai tombol di toolbar. |
+| R / T, Space atau tombol lain tidak bereaksi | Klik sekali di viewport supaya fokus pindah ke sana, atau pakai tombol di toolbar. |
 | Rig masih berpose setelah Animora ditutup | Buka Animora lalu tutup lagi; pose diam akan dikembalikan. |
 
 Menemukan bug atau butuh fitur? Buka issue di [GitHub](https://github.com/Dofly2003/Animora-/issues).

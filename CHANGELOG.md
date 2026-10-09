@@ -4,6 +4,13 @@ All notable changes to Animora are documented here. Versions follow [Semantic Ve
 
 ## [Unreleased]
 
+### Added
+- Viewport keys that work without setup: Space play / pause, Z / C previous / next frame, `[` / `]` previous / next keyframe, M mirror (next to R / T).
+- Shortcuts panel listing every key and how to bind copy, paste and delete in File > Customize Shortcuts. It opens by itself the first time Animora is opened, and from the new Shortcuts toolbar button.
+
+### Changed
+- A key bound both in Customize Shortcuts and in the viewport runs its command once, not twice.
+
 ## [0.2.0] - 2026-10-09
 
 Camera animation for cutscenes.

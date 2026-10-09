@@ -9,6 +9,7 @@
 
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local Selection = game:GetService("Selection")
+local UserInputService = game:GetService("UserInputService")
 
 local Fusion = require(script.Parent.Parent.Packages.Fusion)
 local Localization = require(script.Parent.Parent.Localization)
@@ -29,9 +30,18 @@ local Timeline = require(script.Parent.Timeline)
 local ImportMenu = require(script.Parent.ImportMenu)
 local EasingMenu = require(script.Parent.EasingMenu)
 local AnimationsMenu = require(script.Parent.AnimationsMenu)
+local ShortcutsMenu = require(script.Parent.ShortcutsMenu)
+local Shortcuts = require(script.Parent.Parent.Studio.Shortcuts)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
+
+local MODIFIER_KEYS = {
+	Enum.KeyCode.LeftControl,
+	Enum.KeyCode.RightControl,
+	Enum.KeyCode.LeftAlt,
+	Enum.KeyCode.RightAlt,
+}
 
 local ROW_HEIGHT = 34
 local TOOLBAR_HEIGHT = ROW_HEIGHT * 3
@@ -105,17 +115,22 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		picker:setActive(open)
 	end
 
-	-- R / T in the viewport switch the gizmo, like Studio's rotate and move tools. Keys
-	-- only reach the plugin while it is activated (panel open, picking on).
+	-- Viewport keys (Space, Z C [ ] M, and R / T like Studio's rotate and move tools). Keys
+	-- only reach the plugin while it is activated (panel open, picking on). Ctrl / Alt
+	-- combos are left to Studio, so Ctrl+Z / Ctrl+C undo and copy instead of stepping frames.
 	track(actions.plugin:GetMouse().KeyDown:Connect(function(key: string)
 		if not picker:isActive() or not session.rig or RunGuard.isRunning() then
 			return
 		end
-		if key == "r" then
-			session:setGizmoMode("rotate")
-		elseif key == "t" then
-			session:setGizmoMode("move")
+		if UserInputService:GetFocusedTextBox() then
+			return
 		end
+		for _, modifier in MODIFIER_KEYS do
+			if UserInputService:IsKeyDown(modifier) then
+				return
+			end
+		end
+		Shortcuts.handleKey(key, session)
 	end))
 	-- Re-activate after the user picked another Studio tool and came back to Animora.
 	track(session.changed:Connect(function(change)
@@ -397,6 +412,20 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 	local importMenu: ImportMenu.Handle? = nil
 	local easingMenu: EasingMenu.Handle? = nil
 	local animationsMenu: AnimationsMenu.Handle? = nil
+	local shortcutsMenu: ShortcutsMenu.Handle? = nil
+
+	-- The shortcut help opens by itself the first time the panel is open, so new users
+	-- see the keys without looking for them.
+	local function showShortcutsOnce()
+		if not shortcutsMenu or (parent:IsA("PluginGui") and not parent.Enabled) then
+			return
+		end
+		if pluginSettings:get("shortcutsShown") then
+			return
+		end
+		pluginSettings:set("shortcutsShown", true)
+		shortcutsMenu:open()
+	end
 
 	local animationText = scope:Computed(function(use)
 		use(language)
@@ -656,8 +685,22 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 							onClick = importClip,
 						}),
 						divider(3),
-						languageButton("en", 4),
-						languageButton("id", 5),
+						button({
+							order = 4,
+							width = 80,
+							text = text("shortcuts.button"),
+							onClick = function()
+								if shortcutsMenu then
+									if shortcutsMenu:isOpen() then
+										shortcutsMenu:close()
+									else
+										shortcutsMenu:open()
+									end
+								end
+							end,
+						}),
+						languageButton("en", 5),
+						languageButton("id", 6),
 					}),
 					-- 2. Playback and time | undo | gizmo mode
 					row(2, {
@@ -849,8 +892,13 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 			notice:set({ key = key, args = args })
 		end,
 	})
+	shortcutsMenu = ShortcutsMenu.mount(timelineHost)
+	if parent:IsA("PluginGui") then
+		track(parent:GetPropertyChangedSignal("Enabled"):Connect(showShortcutsOnce))
+	end
 	onSelectionChanged()
 	updatePicker()
+	showShortcutsOnce()
 
 	local handle = {
 		session = session,
@@ -871,6 +919,9 @@ function App.mount(parent: Instance, pluginSettings: Settings.Settings, actions:
 		end
 		if animationsMenu then
 			animationsMenu:destroy()
+		end
+		if shortcutsMenu then
+			shortcutsMenu:destroy()
 		end
 		picker:destroy()
 		gizmo:destroy()

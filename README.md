@@ -16,7 +16,7 @@ Free, open-source animation editor plugin for Roblox Studio — a community alte
 - Select, move, delete, copy/paste and left/right mirror keyframes
 - Per-keyframe easing
 - R6, R15 and AnimationConstraint (Avatar Joint Upgrade) rigs; several animations per rig
-- Studio undo/redo (Ctrl+Z / Ctrl+Y) and bindable shortcuts
+- Studio undo/redo (Ctrl+Z / Ctrl+Y), viewport keys (Space, Z, C, `[` `]`, R, T, M) and bindable Studio shortcuts, listed in the Shortcuts panel
 - Autosave in the place; export to / import from `KeyframeSequence`, saved clips or an asset ID
 - Starter templates (Idle, Walk, Run, Jump, Wave) as references; more can be added as template packs, including cutscenes with a camera
 

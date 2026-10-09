@@ -109,7 +109,22 @@ Press **Import**:
 
 ## 11. Shortcuts
 
-Animora's commands are Studio plugin actions. Give them keys under **File → Customize Shortcuts** (search for "Animora"): Play / Pause, Next / Previous frame, Next / Previous keyframe, Copy, Paste, Delete keyframes, Mirror, Rotate mode, Move mode. **R** and **T** work in the viewport without setting anything up.
+The **Shortcuts** button in the toolbar lists every key. It also opens by itself the first time you open Animora.
+
+**Ready to use.** Click the viewport once so it has focus, then press:
+
+| Key | Does |
+| --- | --- |
+| Space | Play / pause |
+| Z / C | Previous / next frame |
+| [ / ] | Previous / next keyframe |
+| R / T | Rotate mode / move mode (root) |
+| M | Mirror pose |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+
+**Set your own keys.** Copy, paste and delete have no key out of the box, because Ctrl+C, Ctrl+V and Delete act on Studio's own selection. Open **File → Customize Shortcuts**, type "Animora" in the search box, click the Shortcut column of a command and press a key, for example Alt+C for *Animora: Copy keyframes*, Alt+V for *Paste keyframes* and Alt+D for *Delete keyframes*. Every other command can get its own key there too. These keys work anywhere in Studio while the Animora panel is open, and a key set both there and in the viewport still runs once.
+
+If every Animora command shows up twice in Customize Shortcuts, two copies of the plugin are installed (for example a local file plugin and the published one). Remove one under **Plugins → Manage Plugins** or in the Plugins folder.
 
 ## 12. Troubleshooting
 
@@ -118,7 +133,7 @@ Animora's commands are Studio plugin actions. Give them keys under **File → Cu
 | A click selects the whole model | Click the body part again; Animora picks it as soon as its panel is open. |
 | "has no Motor6D or AnimationConstraint joints" | The model is not a rig Animora can drive (for example a skinned mesh). |
 | No arrows in Move mode | Arrows only appear on the root joint; press T to select it. |
-| R / T do nothing | Click once in the viewport so it has focus, or use the toolbar buttons. |
+| R / T, Space or other keys do nothing | Click once in the viewport so it has focus, or use the toolbar buttons. |
 | The rig looks posed after closing Animora | Open Animora and close it again; it restores the rest pose. |
 
 Found a bug or missing a feature? Open an issue on [GitHub](https://github.com/Dofly2003/Animora-/issues).

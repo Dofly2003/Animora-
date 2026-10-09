@@ -4,6 +4,8 @@
 local DEFAULTS: { [string]: any } = {
 	language = "en",
 	timelineFps = 60,
+	-- Set once the shortcut help has opened by itself on the first use.
+	shortcutsShown = false,
 }
 
 local Settings = {}
