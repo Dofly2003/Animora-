@@ -9,6 +9,10 @@ All notable changes to Animora are documented here. Versions follow [Semantic Ve
 - The camera path, keyframe cameras and playhead position are drawn in the viewport.
 - Export also writes the camera as a ModuleScript shot (ReplicatedStorage > AnimoraCameras) and installs the AnimoraCamera player module to play it in game.
 - Tests run from the Command Bar (scripts/RunTestsCommandBar.luau).
+- Template packs: ModuleScripts in a TemplatePacks folder add templates to the list, and templates can carry camera keys placed around the rig (cutscenes).
+
+### Changed
+- The public build ships only the basic starter templates (Idle, Walk, Run, Jump, Wave) as references. The Scared, Flashlight, ghost and NISKALA templates moved to a separate, project-specific template pack.
 
 ## [0.1.0] - 2026-10-08
 

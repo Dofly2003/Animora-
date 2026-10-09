@@ -49,7 +49,7 @@ Every drag creates or updates a keyframe at the playhead as soon as you release 
 
 The first toolbar row holds the clip settings:
 
-- **Anim: name** opens the animation list of this rig: **New**, **Duplicate**, **Rename**, **Delete**, and **From template** (20 starters: Idle, Walk, Run, Jump, Wave, a Scared set, Flashlight, a ghost set and a NISKALA set). Templates are starting points; press Play and adjust the poses.
+- **Anim: name** opens the animation list of this rig: **New**, **Duplicate**, **Rename**, **Delete**, and **From template** (Idle, Walk, Run, Jump, Wave). Templates are starting points to learn from; press Play and adjust the poses.
 - **Length** in seconds (type a value and press Enter).
 - **Loop** on or off.
 - **FPS** cycles 24 → 30 → 60. Keyframes keep their time in seconds.

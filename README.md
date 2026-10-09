@@ -18,7 +18,7 @@ Free, open-source animation editor plugin for Roblox Studio — a community alte
 - R6, R15 and AnimationConstraint (Avatar Joint Upgrade) rigs; several animations per rig
 - Studio undo/redo (Ctrl+Z / Ctrl+Y) and bindable shortcuts
 - Autosave in the place; export to / import from `KeyframeSequence`, saved clips or an asset ID
-- 20 starter templates: Idle, Walk, Run, Jump, Wave, a Scared set, Flashlight, a horror ghost set (Kuntilanak, Pocong, Tuyul) and a NISKALA everyday set
+- Starter templates (Idle, Walk, Run, Jump, Wave) as references; more can be added as template packs, including cutscenes with a camera
 
 ### Planned
 
@@ -70,7 +70,7 @@ selene src
 
 ## Bahasa Indonesia
 
-Animora adalah plugin animasi gratis dan open-source untuk Roblox Studio. Tahap MVP sudah selesai dan sekarang sedang menuju beta (v0.1.0): timeline, gizmo putar, easing, mirror, ekspor/impor, autosave dan 20 template animasi sudah bisa dipakai. Antarmuka tersedia dalam bahasa Inggris (default) dan Bahasa Indonesia. Pasang gratis dari [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora). Cara pemakaian lengkap ada di [panduan](docs/PANDUAN.md). Kontribusi dan laporan bug sangat diterima lewat GitHub Issues.
+Animora adalah plugin animasi gratis dan open-source untuk Roblox Studio. Tahap MVP sudah selesai dan sekarang sedang menuju beta (v0.1.0): timeline, gizmo putar, easing, mirror, ekspor/impor, autosave, animasi kamera untuk cutscene, dan template gerak dasar sudah bisa dipakai. Antarmuka tersedia dalam bahasa Inggris (default) dan Bahasa Indonesia. Pasang gratis dari [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora). Cara pemakaian lengkap ada di [panduan](docs/PANDUAN.md). Kontribusi dan laporan bug sangat diterima lewat GitHub Issues.
 
 ## License
 

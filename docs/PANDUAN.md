@@ -49,7 +49,7 @@ Setiap kali selesai menyeret, keyframe langsung dibuat atau diperbarui di posisi
 
 Baris pertama toolbar berisi pengaturan klip:
 
-- **Anim: nama** membuka daftar animasi rig ini: **New**, **Duplicate**, **Rename**, **Delete**, dan **From template** (20 template: Idle, Walk, Run, Jump, Wave, set Scared, Flashlight, set hantu, dan set NISKALA). Template hanya titik awal; tekan Play lalu sesuaikan posenya.
+- **Anim: nama** membuka daftar animasi rig ini: **New**, **Duplicate**, **Rename**, **Delete**, dan **From template** (Idle, Walk, Run, Jump, Wave). Template hanya titik awal untuk dipelajari; tekan Play lalu sesuaikan posenya.
 - **Durasi** dalam detik (ketik angka lalu tekan Enter).
 - **Loop** nyala atau mati.
 - **FPS** berganti 24 → 30 → 60. Waktu keyframe tetap dalam detik.

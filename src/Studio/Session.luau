@@ -1229,11 +1229,12 @@ function Session.newAnimationFromTemplate(self: Session, templateId: string): Mo
 	if not (binder and preview and template) then
 		return nil
 	end
+	local rootPart = RigBinder.findRootPart(binder.joints)
 	local clip = Templates.build(template, function(name)
 		return binder.joints[name] ~= nil
 	end, function(name)
 		return preview:restC0(binder.joints[name])
-	end, DEFAULT_FPS)
+	end, DEFAULT_FPS, if rootPart then rootPart.CFrame else nil)
 	if next(clip.tracks) == nil then
 		return nil
 	end
