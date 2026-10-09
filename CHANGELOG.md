@@ -4,6 +4,10 @@ All notable changes to Animora are documented here. Versions follow [Semantic Ve
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
+Camera animation for cutscenes.
+
 ### Added
 - Camera track for cutscenes: Key camera stores the viewport camera and its FOV at the playhead, View camera looks through it while scrubbing and playing, and the FOV box keys zooms. Camera keys orbit around the character when they look at it.
 - The camera path, keyframe cameras and playhead position are drawn in the viewport.
@@ -33,5 +37,6 @@ First public beta.
 - English and Indonesian UI, user guide in both languages.
 - Plugin icon.
 
-[Unreleased]: https://github.com/Dofly2003/Animora-/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Dofly2003/Animora-/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Dofly2003/Animora-/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Dofly2003/Animora-/releases/tag/v0.1.0

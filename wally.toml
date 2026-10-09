@@ -1,7 +1,7 @@
 [package]
 name = "dofly2003/animora"
 description = "Free, open-source animation editor plugin for Roblox Studio"
-version = "0.1.0"
+version = "0.2.0"
 license = "MIT"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"

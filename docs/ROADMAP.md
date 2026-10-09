@@ -17,7 +17,7 @@ Requested features that are not scheduled yet. Newest first.
 
 | Requested | Feature | Notes |
 | --- | --- | --- |
-| 2026-09-29 | Camera animation (cutscenes) | Planned for v1; asked for by the project owner, parked until the beta ships |
+| 2026-09-29 | Camera animation (cutscenes) | Done in v0.2.0 (camera track, FOV, viewport path, in-game player) |
 
 ## Status (2026-10-08)
 
@@ -27,4 +27,4 @@ Done: phase 0 spikes; timeline, rotate gizmo with auto-key, keyframe editing (se
 
 Also done since: move gizmo for the root joint with rotate (R) / move (T) modes, picking body parts through accessories, a toolbar grouped into clip / playback / edit rows, spike tools removed, rig-type label (R15 / R6 / custom, plus Constraint), plugin icon, user guide (docs/GUIDE.md, docs/PANDUAN.md).
 
-Released: v0.1.0 beta on 2026-10-08 ([GitHub](https://github.com/Dofly2003/Animora-/releases/tag/v0.1.0), [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora)); all 59 tests pass (run from the Command Bar). Next: collect feedback from 5-10 animators and fix bugs (phase 3 gate).
+Released: v0.1.0 beta on 2026-10-08 ([GitHub](https://github.com/Dofly2003/Animora-/releases/tag/v0.1.0), [Creator Store](https://create.roblox.com/store/asset/116677988518638/Animora)); all 59 tests pass (run from the Command Bar). Released: v0.2.0 beta on 2026-10-09 with camera animation (pulled forward from v1) and template packs. Next: collect feedback from 5-10 animators and fix bugs (phase 3 gate).
